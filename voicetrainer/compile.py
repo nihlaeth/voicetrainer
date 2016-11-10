@@ -20,6 +20,7 @@ def compile_ex(
             with Popen(
                 [
                     'lilypond',
+                    '--loglevel=WARN',
                     '--output={}-{}bmp-{}'.format(
                         file_name[:-8],  # minus '-midi.ly'
                         tempo,
@@ -40,13 +41,12 @@ def compile_ex(
                 log.append((outs, errs))
                 if proc.returncode != 0:
                     print(errs)
-                print(outs)
-                print(errs)
     else:
         for pitch, sound in product(pitches, sounds):
             with Popen(
                 [
                     'lilypond',
+                    '--loglevel=WARN',
                     '--format=png',
                     '--png',
                     '--output={}-{}-{}'.format(
@@ -69,23 +69,23 @@ def compile_ex(
                 log.append((outs, errs))
                 if proc.returncode != 0:
                     print(errs)
-                print(outs)
-                print(errs)
     return log
 
-def compile_all(path: str) -> None:
+def compile_all(path: str) -> List[List[Tuple[str, str]]]:
     """Compile all exercises."""
     exercises = []
+    logs = []
     for item in listdir(path):
         if isfile(join(path, item)) and item.endswith('.ly'):
             exercises.append(item)
     for ex in exercises:
-        compile_ex(
+        logs.append(compile_ex(
             join(path, ex),
             [i*10 for i in range(8, 16)],
             [note + octave for note, octave in product(
                 list("cdefg"), [",", "", "'"])],
-            ["Mi", "Na", "Noe", "Nu", "No"])
+            ["Mi", "Na", "Noe", "Nu", "No"]))
+    return logs
 
 if __name__ == "__main__":
-    compile_all(join(dirname(realpath(__file__)), "../exercises/"))
+    print(compile_all(join(dirname(realpath(__file__)), "../exercises/")))
