@@ -4,9 +4,11 @@ from string import Template
 from os import listdir
 from os.path import isfile, join, realpath, dirname
 from itertools import product
-from subprocess import Popen, PIPE, TimeoutExpired
+from asyncio import create_subprocess_exec, get_event_loop
+from asyncio.subprocess import PIPE
 
-def compile_ex(
+# pylint: disable=invalid-name,bad-continuation
+async def compile_ex(
         file_name: str,
         tempos: List[int],
         pitches: List[str],
@@ -17,61 +19,48 @@ def compile_ex(
     log = []
     if file_name.endswith('-midi.ly'):
         for tempo, pitch in product(tempos, pitches):
-            with Popen(
-                [
-                    'lilypond',
-                    '--loglevel=WARN',
-                    '--output={}-{}bmp-{}'.format(
-                        file_name[:-8],  # minus '-midi.ly'
-                        tempo,
-                        pitch),
-                    '-'],
+            proc = await create_subprocess_exec(
+                'lilypond',
+                '--loglevel=WARN',
+                '--output={}-{}bmp-{}'.format(
+                    file_name[:-8],  # minus '-midi.ly'
+                    tempo,
+                    pitch),
+                '-',
                 stdin=PIPE,
                 stdout=PIPE,
-                stderr=PIPE,
-                universal_newlines=True) as proc:
-                try:
-                    outs, errs = proc.communicate(exercise.safe_substitute(
-                        tempo=tempo,
-                        pitch=pitch,
-                        pitch_noheight=pitch[0]))
-                except TimeoutExpired:
-                    proc.kill()
-                    outs, errs = proc.communicate()
-                log.append((outs, errs))
-                if proc.returncode != 0:
-                    print(errs)
+                stderr=PIPE)
+            outs, errs = await proc.communicate(str.encode(
+                exercise.safe_substitute(
+                    tempo=tempo,
+                    pitch=pitch,
+                    pitch_noheight=pitch[0])))
     else:
         for pitch, sound in product(pitches, sounds):
-            with Popen(
-                [
-                    'lilypond',
-                    '--loglevel=WARN',
-                    '--format=png',
-                    '--png',
-                    '--output={}-{}-{}'.format(
-                        file_name[:-3],  # minus '.ly'
-                        pitch,
-                        sound),
-                    '-'],
+            proc = await create_subprocess_exec(
+                'lilypond',
+                '--loglevel=WARN',
+                '--format=png',
+                '--png',
+                '--output={}-{}-{}'.format(
+                    file_name[:-3],  # minus '.ly'
+                    pitch,
+                    sound),
+                '-',
                 stdin=PIPE,
                 stdout=PIPE,
-                stderr=PIPE,
-                universal_newlines=True) as proc:
-                try:
-                    outs, errs = proc.communicate(exercise.safe_substitute(
-                        pitch=pitch,
-                        pitch_noheight=pitch[0],
-                        sound=sound))
-                except TimeoutExpired:
-                    proc.kill()
-                    outs, errs = proc.communicate()
-                log.append((outs, errs))
-                if proc.returncode != 0:
-                    print(errs)
+                stderr=PIPE)
+            outs, errs = await proc.communicate(str.encode(
+                exercise.safe_substitute(
+                    pitch=pitch,
+                    pitch_noheight=pitch[0],
+                    sound=sound)))
+        log.append((bytes.decode(outs), bytes.decode(errs)))
+        if proc.returncode != 0:
+            print(bytes.decode(errs))
     return log
 
-def compile_all(path: str) -> List[List[Tuple[str, str]]]:
+async def compile_all(path: str) -> List[List[Tuple[str, str]]]:
     """Compile all exercises."""
     exercises = []
     logs = []
@@ -79,13 +68,18 @@ def compile_all(path: str) -> List[List[Tuple[str, str]]]:
         if isfile(join(path, item)) and item.endswith('.ly'):
             exercises.append(item)
     for ex in exercises:
-        logs.append(compile_ex(
+        log = await compile_ex(
             join(path, ex),
             [i*10 for i in range(8, 16)],
             [note + octave for note, octave in product(
                 list("cdefg"), [",", "", "'"])],
-            ["Mi", "Na", "Noe", "Nu", "No"]))
+            ["Mi", "Na", "Noe", "Nu", "No"])
+        logs.append(log)
     return logs
 
 if __name__ == "__main__":
-    print(compile_all(join(dirname(realpath(__file__)), "../exercises/")))
+    loop = get_event_loop()
+    result = loop.run_until_complete(
+        compile_all(join(dirname(realpath(__file__)), "../exercises/")))
+    loop.close()
+    print(result)

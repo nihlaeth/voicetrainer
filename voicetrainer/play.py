@@ -12,7 +12,7 @@ async def get_qsynth_port() -> str:
         output, err = await result.communicate()
         if result.returncode != 0:
             raise OSError('pmidi not functioning {}'.format(err))
-        output = output.split('\n')
+        output = bytes.decode(output).split('\n')
         for line in output:
             if 'Qsynth' in line or 'qsynth' in line:
                 # extract port
@@ -44,3 +44,4 @@ if __name__ == "__main__":
             dirname(realpath(__file__)),
             "../exercises/control-140bmp-d.midi")))
     loop.run_until_complete(exec_on_midi_end(proc_, lambda: print('finis')))
+    loop.close()
