@@ -5,6 +5,10 @@ import asyncio
 from os.path import isfile, join, dirname, realpath
 from os import listdir
 from itertools import product
+from random import choice
+
+from voicetrainer.play import get_qsynth_port, play_midi, stop_midi, exec_on_midi_end
+from voicetrainer.compile import compile_ex
 
 class Application(tk.Tk):
 
@@ -23,6 +27,14 @@ class Application(tk.Tk):
         self.loop = loop
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.tasks = []
+
+        # midi state
+        self.port = None
+        self.player = None
+        self.stopping = False
+        self.play_next = False
+
+        # gui elements storage
         self.notebook = None
         self.resize = None
         self.tabs = []
@@ -126,6 +138,7 @@ class Application(tk.Tk):
         sheet = ttk.Label(tab)
         self.sheets.append(sheet)
         sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.E+tk.S+tk.W)
+        self.tasks.append(asyncio.ensure_future(self.update_sheet()))
 
     def create_widgets(self):
         """Put some stuff up to look at."""
@@ -164,25 +177,105 @@ class Application(tk.Tk):
         self.loop.stop()
         self.destroy()
 
+    async def update_sheet(self):
+        """Display relevant sheet."""
+        png = await self.get_file()
+        tab_num = self.notebook.select()
+        self.sheets[tab_num].photo = tk.PhotoImage(file=png)
+
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""
-        pass
+        self.tasks.append(asyncio.ensure_future(self.update_sheet))
+        if self.player is not None:
+            self.play_next = True
+            await self.stop()
+        else:
+            await self.play()
 
     async def next_(self):
         """Skip to next exercise."""
-        pass
+        tab_num = self.notebook.select()
+        curr_pitch = self.controls[tab_num]['curr_pitch'].get()
+        curr_pos = self.pitch_list.index(curr_pitch)
+        pitch_pos = curr_pos
+        pitch_selection = self.pitches[tab_num].curselection()
+        if len(pitch_selection) == 0:
+            return
+        random = True if self.controls[tab_num]['random'].get() == 1 else False
+        if random:
+            while pitch_pos == curr_pos:
+                pitch_pos = choice(pitch_selection)
+        elif curr_pos in pitch_selection:
+            pitch_pos = pitch_selection[pitch_selection.index(curr_pos) + 1]
+        else:
+            while pitch_pos not in pitch_selection:
+                pitch_pos += 1
+                if pitch_pos >= len(self.pitch_list):
+                    pitch_pos = 0
+        self.controls[tab_num]['curr_pos'].set(self.pitch_list[pitch_pos])
 
     async def play_or_stop(self):
         """Play or stop midi."""
-        pass
+        if self.player is not None:
+            # user stopped playback
+            self.stopping = True
+            await self.stop()
+        else:
+            await self.play()
+
+    async def get_file(self, midi: bool=False) -> str:
+        """Assemble file_name, compile if non-existent."""
+        tab_num = self.notebook.select()
+        tab_name = self.notebook.tab(tab_num)['text']
+        pitch = self.controls[tab_num]['curr_pitch'].get()
+        bpm = self.bpm[tab_num].get()
+        # TODO: add sound selection
+        sound = 'Mi'
+        if midi:
+            extension = "-midi.ly"
+            file_name = join(
+                self.data_path,
+                "{}-{}bpm-{}.midi".format(tab_name, bpm, pitch))
+        else:
+            extension = ".ly"
+            file_name = join(
+                self.data_path,
+                "{}-{}-{}.png".format(tab_name, pitch, sound))
+        if not isfile(file_name):
+            await compile_ex(
+                "{}{}".format(tab_name, extension),
+                [bpm],
+                [pitch],
+                [sound])
+        return file_name
+
+    async def play(self):
+        """Play midi file."""
+        midi = await self.get_file(midi=True)
+        if self.port is None:
+            self.port = await get_qsynth_port()
+        self.player = await play_midi(self.port, midi)
+        self.control_vars[self.notebook.select()]['play_stop'].set("stop")
+        self.tasks.append(asyncio.ensure_future(exec_on_midi_end(
+            self.player,
+            self.on_midi_stop)))
 
     async def stop(self):
         """Stop midi regardless of state."""
-        pass
+        if self.player is not None:
+            await stop_midi(self.player)
 
     async def on_midi_stop(self):
         """Handle end of midi playback."""
-        pass
+        self.player = None
+        if self.stopping:
+            self.play_next = False
+            self.control_vars[self.notebook.select()]['play_stop'].set("play")
+            return
+        tab_num = self.notebook.select()
+        if self.play_next or self.controls[tab_num]['autonext'].get() == 1:
+            self.play_next = False
+            await self.next_()
 
 if __name__ == "__main__":
     # pylint: disable=invalid-name
