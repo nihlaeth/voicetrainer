@@ -21,6 +21,7 @@ class Application(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.tasks = []
         self.notebook = None
+        self.resize = None
         self.tabs = []
         self.bpm = []
         self.labels = []
@@ -51,7 +52,7 @@ class Application(tk.Tk):
             orient=tk.HORIZONTAL)
         bpm.set(140)
         self.bpm.append(bpm)
-        bpm.grid(column=3, row=0)
+        bpm.grid(column=3, row=0, sticky=tk.W+tk.N)
 
         # pitch selector
         scrollbar = tk.Scrollbar(tab, orient=tk.VERTICAL)
@@ -75,6 +76,12 @@ class Application(tk.Tk):
 
 
     def create_widgets(self):
+        top = self.winfo_toplevel()
+        top.rowconfigure(0, weight=1)
+        top.columnconfigure(0, weight=1)
+        top.title("VoiceTrainer")
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
         self.notebook = ttk.Notebook(self)
         exercises = []
         for item in listdir(self.data_path):
@@ -84,10 +91,13 @@ class Application(tk.Tk):
                 exercises.append(item[:-3])
         for ex in exercises:
             tab = ttk.Frame(self.notebook)
+            tab.rowconfigure(1, weight=1)
+            tab.columnconfigure(3, weight=1)
             self.notebook.add(tab, text=ex)
             self.tabs.append(tab)
             self.create_tab(ex, tab, len(self.tabs) - 1)
-        self.notebook.grid(column=0, row=0)
+        self.notebook.grid(column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.resize = ttk.Sizegrip(self).grid(row=1, sticky=tk.S+tk.E)
 
     def updater(self, interval):
         self.update()
