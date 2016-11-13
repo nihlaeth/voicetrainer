@@ -28,7 +28,6 @@ class Application(tk.Tk):
             list("cdefgab"))]
         self.loop = loop
         self.protocol("WM_DELETE_WINDOW", self.close)
-        self.tasks = []
 
         # midi state
         self.port = None
@@ -105,8 +104,7 @@ class Application(tk.Tk):
             frame,
             textvar,
             *self.pitch_list,
-            command=lambda _: self.tasks.append(
-                asyncio.ensure_future(self.on_pitch_change())))
+            command=lambda _: asyncio.ensure_future(self.on_pitch_change()))
         self.controls[tab_num]['pitch'] = curr_pitch
         curr_pitch.grid(column=0, row=0, sticky=tk.W+tk.N)
 
@@ -125,8 +123,7 @@ class Application(tk.Tk):
         next_ = ttk.Button(
             frame,
             text="next",
-            command=lambda: self.tasks.append(
-                asyncio.ensure_future(self.next_())))
+            command=lambda: asyncio.ensure_future(self.next_()))
         self.controls[tab_num]['next_'] = next_
         next_.grid(column=3, row=0, sticky=tk.W+tk.N)
 
@@ -136,8 +133,7 @@ class Application(tk.Tk):
         play = ttk.Button(
             frame,
             textvariable=play_stop,
-            command=lambda: self.tasks.append(
-                asyncio.ensure_future(self.play_or_stop())))
+            command=lambda: asyncio.ensure_future(self.play_or_stop()))
         self.controls[tab_num]['play'] = play
         play.grid(column=4, row=0, sticky=tk.W+tk.N)
 
@@ -145,7 +141,7 @@ class Application(tk.Tk):
         sheet = ttk.Label(tab)
         self.sheets.append(sheet)
         sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.E+tk.S+tk.W)
-        self.tasks.append(asyncio.ensure_future(self.update_sheet()))
+        asyncio.ensure_future(self.update_sheet())
 
     def create_widgets(self):
         """Put some stuff up to look at."""
@@ -179,7 +175,7 @@ class Application(tk.Tk):
 
     def close(self):
         """Close application and stop event loop."""
-        for task in self.tasks:
+        for task in asyncio.Task.all_tasks():
             task.cancel()
         self.loop.stop()
         self.destroy()
@@ -199,7 +195,7 @@ class Application(tk.Tk):
 
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""
-        self.tasks.append(asyncio.ensure_future(self.update_sheet()))
+        asyncio.ensure_future(self.update_sheet())
         if self.player is not None:
             self.play_next = True
             await self.stop()
@@ -272,9 +268,9 @@ class Application(tk.Tk):
             self.port = await get_qsynth_port()
         self.player = await play_midi(self.port, midi)
         self.control_vars[self.notebook.select()]['play_stop'].set("stop")
-        self.tasks.append(asyncio.ensure_future(exec_on_midi_end(
+        asyncio.ensure_future(exec_on_midi_end(
             self.player,
-            self.on_midi_stop)))
+            self.on_midi_stop))
 
     async def stop(self):
         """Stop midi regardless of state."""
