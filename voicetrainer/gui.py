@@ -108,11 +108,15 @@ class Application(tk.Tk):
         self.controls[tab_num]['pitch'] = curr_pitch
         curr_pitch.grid(column=0, row=0, sticky=tk.W+tk.N)
 
-        random = ttk.Checkbutton(frame, text="random")
+        rand_int = tk.IntVar()
+        self.control_vars[tab_num]['random'] = rand_int
+        random = ttk.Checkbutton(frame, text="random", variable=rand_int)
         self.controls[tab_num]['random'] = random
         random.grid(column=1, row=0, sticky=tk.W+tk.N)
 
-        autonext = ttk.Checkbutton(frame, text="autonext")
+        auto_int = tk.IntVar()
+        self.control_vars[tab_num]['autonext'] = auto_int
+        autonext = ttk.Checkbutton(frame, text="autonext", variable=auto_int)
         self.controls[tab_num]['autonext'] = autonext
         autonext.grid(column=2, row=0, sticky=tk.W+tk.N)
 
@@ -193,7 +197,7 @@ class Application(tk.Tk):
 
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""
-        self.tasks.append(asyncio.ensure_future(self.update_sheet))
+        self.tasks.append(asyncio.ensure_future(self.update_sheet()))
         if self.player is not None:
             self.play_next = True
             await self.stop()
@@ -208,11 +212,11 @@ class Application(tk.Tk):
         pitch_selection = self.pitches[self.tab_num].curselection()
         if len(pitch_selection) == 0:
             return
-        random = True if self.controls[self.tab_num]['random'].get() == 1 else False
-        if random:
+        if self.control_vars[self.tab_num]['random'].get() == 1:
             while pitch_pos == curr_pos:
                 pitch_pos = choice(pitch_selection)
         elif curr_pos in pitch_selection:
+            # TODO: check is we're not at end of pitch_selection
             pitch_pos = pitch_selection[pitch_selection.index(curr_pos) + 1]
         else:
             while pitch_pos not in pitch_selection:
@@ -220,6 +224,8 @@ class Application(tk.Tk):
                 if pitch_pos >= len(self.pitch_list):
                     pitch_pos = 0
         self.control_vars[self.tab_num]['curr_pitch'].set(self.pitch_list[pitch_pos])
+        # I thought tkinter would call this, but apparently not
+        await self.on_pitch_change()
 
     async def play_or_stop(self):
         """Play or stop midi."""
@@ -249,7 +255,7 @@ class Application(tk.Tk):
                 "{}-{}-{}.png".format(tab_name, pitch, sound))
         if not isfile(file_name):
             await compile_ex(
-                "{}{}".format(tab_name, extension),
+                join(self.data_path, "{}{}".format(tab_name, extension)),
                 [bpm],
                 [pitch],
                 [sound])
@@ -278,7 +284,7 @@ class Application(tk.Tk):
             self.play_next = False
             self.control_vars[self.tab_num]['play_stop'].set("play")
             return
-        if self.play_next or self.controls[self.tab_num]['autonext'].get() == 1:
+        if self.play_next or self.control_vars[self.tab_num]['autonext'].get() == 1:
             self.play_next = False
             await self.next_()
 
