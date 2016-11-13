@@ -97,6 +97,8 @@ class Application(tk.Tk):
             tab,
             yscrollcommand=scrollbar.set,
             width=3,
+            # make selections in multiple listboxes possible
+            exportselection=False,
             selectmode=tk.MULTIPLE)
         self.pitches.append(listbox)
         listbox.grid(row=1, column=1, sticky=tk.N+tk.S+tk.W)
