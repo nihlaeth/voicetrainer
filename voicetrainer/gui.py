@@ -8,14 +8,19 @@ from os import listdir
 from itertools import product
 from random import choice
 
-from voicetrainer.play import get_qsynth_port, play_midi, stop_midi, exec_on_midi_end
+from voicetrainer.play import (
+    get_qsynth_port,
+    play_midi,
+    stop_midi,
+    exec_on_midi_end)
 from voicetrainer.compile import compile_ex, compile_all
 
-# pylint: disable=too-many-instance-attributes,too-many-locals,too-many-statements
+# pylint: disable=too-many-instance-attributes,too-many-locals
+# pylint: disable=too-many-statements
 # It's messy, but there simply too many references to keep alive.
 # pylint: disable=broad-except
-# because of asyncio exceptions are only displayed at exit, we want to give the
-# user immediate feedback.
+# because of asyncio exceptions are only displayed at exit, we
+# want to give the user immediate feedback.
 class Application(tk.Tk):
 
     """
@@ -120,7 +125,8 @@ class Application(tk.Tk):
             frame,
             textvar,
             *self.pitch_list,
-            command=lambda _: asyncio.ensure_future(self.on_pitch_change()))
+            command=lambda _: asyncio.ensure_future(
+                self.on_pitch_change()))
         self.controls[tab_num]['pitch'] = curr_pitch
         curr_pitch.grid(column=1, row=0, sticky=tk.W+tk.N)
 
@@ -132,7 +138,8 @@ class Application(tk.Tk):
 
         auto_int = tk.IntVar()
         self.control_vars[tab_num]['autonext'] = auto_int
-        autonext = ttk.Checkbutton(frame, text="autonext", variable=auto_int)
+        autonext = ttk.Checkbutton(
+            frame, text="autonext", variable=auto_int)
         self.controls[tab_num]['autonext'] = autonext
         autonext.grid(column=3, row=0, sticky=tk.W+tk.N)
 
@@ -173,7 +180,8 @@ class Application(tk.Tk):
         self.menubar.add_cascade(label='File', menu=self.file_menu)
         self.file_menu.add_command(
             label='Recompile',
-            command=lambda: asyncio.ensure_future(compile_all(self.data_path)))
+            command=lambda: asyncio.ensure_future(
+                compile_all(self.data_path)))
         self.file_menu.add_command(label='Quit', command=self.close)
 
         self.rowconfigure(0, weight=1)
@@ -245,13 +253,15 @@ class Application(tk.Tk):
                 # TODO: cycle through sounds
                 pitch_pos = pitch_selection[0]
             else:
-                pitch_pos = pitch_selection[pitch_selection.index(curr_pos) + 1]
+                pitch_pos = pitch_selection[
+                    pitch_selection.index(curr_pos) + 1]
         else:
             while pitch_pos not in pitch_selection:
                 pitch_pos += 1
                 if pitch_pos >= len(self.pitch_list):
                     pitch_pos = 0
-        self.control_vars[self.tab_num]['curr_pitch'].set(self.pitch_list[pitch_pos])
+        self.control_vars[self.tab_num]['curr_pitch'].set(
+            self.pitch_list[pitch_pos])
         # I thought tkinter would call this, but apparently not
         await self.on_pitch_change()
 
@@ -332,7 +342,8 @@ class Application(tk.Tk):
             self.play_next = False
             self.control_vars[self.tab_num]['play_stop'].set("play")
             return
-        if self.play_next or self.control_vars[self.tab_num]['autonext'].get() == 1:
+        if self.play_next or \
+                self.control_vars[self.tab_num]['autonext'].get() == 1:
             self.play_next = False
             await self.next_()
             return
