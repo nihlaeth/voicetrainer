@@ -96,7 +96,19 @@ class Application(tk.Tk):
         frame = ttk.Frame(tab)
         self.controls[tab_num]['frame'] = frame
         frame.grid(column=2, row=2, columnspan=2, sticky=tk.W+tk.N)
-        # pitch random autonext next play/stop
+        # sound pitch random autonext next play/stop
+
+        soundvar = tk.StringVar()
+        soundvar.set("Mi")
+        self.control_vars[tab_num]['sound'] = soundvar
+        sound = tk.OptionMenu(
+            frame,
+            soundvar,
+            *["Mi", "Na", "Noe", "Nu", "No"],
+            command=lambda _: asyncio.ensure_future(self.update_sheet()))
+        self.controls[tab_num]['sound'] = sound
+        sound.grid(column=0, row=0, sticky=tk.W+tk.N)
+
         textvar = tk.StringVar()
         textvar.set(self.pitch_list[listbox.curselection()[0]])
         self.control_vars[tab_num]['curr_pitch'] = textvar
@@ -106,26 +118,26 @@ class Application(tk.Tk):
             *self.pitch_list,
             command=lambda _: asyncio.ensure_future(self.on_pitch_change()))
         self.controls[tab_num]['pitch'] = curr_pitch
-        curr_pitch.grid(column=0, row=0, sticky=tk.W+tk.N)
+        curr_pitch.grid(column=1, row=0, sticky=tk.W+tk.N)
 
         rand_int = tk.IntVar()
         self.control_vars[tab_num]['random'] = rand_int
         random = ttk.Checkbutton(frame, text="random", variable=rand_int)
         self.controls[tab_num]['random'] = random
-        random.grid(column=1, row=0, sticky=tk.W+tk.N)
+        random.grid(column=2, row=0, sticky=tk.W+tk.N)
 
         auto_int = tk.IntVar()
         self.control_vars[tab_num]['autonext'] = auto_int
         autonext = ttk.Checkbutton(frame, text="autonext", variable=auto_int)
         self.controls[tab_num]['autonext'] = autonext
-        autonext.grid(column=2, row=0, sticky=tk.W+tk.N)
+        autonext.grid(column=3, row=0, sticky=tk.W+tk.N)
 
         next_ = ttk.Button(
             frame,
             text="next",
             command=lambda: asyncio.ensure_future(self.next_()))
         self.controls[tab_num]['next_'] = next_
-        next_.grid(column=3, row=0, sticky=tk.W+tk.N)
+        next_.grid(column=4, row=0, sticky=tk.W+tk.N)
 
         play_stop = tk.StringVar()
         play_stop.set("play")
@@ -135,7 +147,7 @@ class Application(tk.Tk):
             textvariable=play_stop,
             command=lambda: asyncio.ensure_future(self.play_or_stop()))
         self.controls[tab_num]['play'] = play
-        play.grid(column=4, row=0, sticky=tk.W+tk.N)
+        play.grid(column=5, row=0, sticky=tk.W+tk.N)
 
         # sheet display
         sheet = ttk.Label(tab)
@@ -241,8 +253,7 @@ class Application(tk.Tk):
         tab_name = self.notebook.tab(self.tab_num)['text']
         pitch = self.control_vars[self.tab_num]['curr_pitch'].get()
         bpm = self.bpm[self.tab_num].get()
-        # TODO: add sound selection
-        sound = 'Mi'
+        sound = self.control_vars[self.tab_num]['sound'].get()
         if midi:
             extension = "-midi.ly"
             file_name = join(
