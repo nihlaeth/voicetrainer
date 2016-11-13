@@ -9,7 +9,7 @@ from itertools import product
 from random import choice
 
 from voicetrainer.play import get_qsynth_port, play_midi, stop_midi, exec_on_midi_end
-from voicetrainer.compile import compile_ex
+from voicetrainer.compile import compile_ex, compile_all
 
 # pylint: disable=too-many-instance-attributes,too-many-locals,too-many-statements
 # It's messy, but there simply too many references to keep alive.
@@ -165,6 +165,17 @@ class Application(tk.Tk):
         top.rowconfigure(0, weight=1)
         top.columnconfigure(0, weight=1)
         top.title("VoiceTrainer")
+
+        # top menu
+        self.menubar = tk.Menu(top)
+        top['menu'] = self.menubar
+        self.file_menu = tk.Menu(self.menubar)
+        self.menubar.add_cascade(label='File', menu=self.file_menu)
+        self.file_menu.add_command(
+            label='Recompile',
+            command=lambda: asyncio.ensure_future(compile_all(self.data_path)))
+        self.file_menu.add_command(label='Quit', command=self.close)
+
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
         self.notebook = ttk.Notebook(self)
