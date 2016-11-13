@@ -14,10 +14,10 @@ exercise = {
     \key c \major
     < c e g >2\sustainOn
     \repeat unfold 2 {
-      c4->( d e f
+      \breathe c4->( d e f
       g2)
     }
-    c,4->( d e f
+    \breathe c,4->( d e f
     g f e d
     c2 \sustainOff ) \bar "||" \break
   }
@@ -26,7 +26,7 @@ exercise = {
 \book {
   \score {
     <<
-      \new ChordNames { \chordmode { ${pitch_noheight}:m }}
+      \new ChordNames { \chordmode { ${pitch_noheight} }}
       \new Staff = "voice" <<
         \global
         \exercise
@@ -41,6 +41,13 @@ exercise = {
         \Staff \RemoveEmptyStaves
         \override VerticalAxisGroup #'remove-first = ##t
       }
+    }
+  }
+  \markup{
+    \column{
+      \line accent on first note, steady volume for the rest
+      \line higher voice regions: think blowhole, tension in stomach
+      \line lower voice regions: sigh, sound between teeth, tension in bottom
     }
   }
   \paper{
