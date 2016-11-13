@@ -35,6 +35,7 @@ async def compile_ex(
                     tempo=tempo,
                     pitch=pitch,
                     pitch_noheight=pitch[0])))
+            log.append((bytes.decode(outs), bytes.decode(errs)))
     else:
         for pitch, sound in product(pitches, sounds):
             proc = await create_subprocess_exec(
@@ -55,9 +56,7 @@ async def compile_ex(
                     pitch=pitch,
                     pitch_noheight=pitch[0],
                     sound=sound)))
-        log.append(tuple(bytes.decode(outs), bytes.decode(errs)))
-        if proc.returncode != 0:
-            print(bytes.decode(errs))
+            log.append((bytes.decode(outs), bytes.decode(errs)))
     return log
 
 async def compile_all(path: str) -> List[List[Tuple[str, str]]]:
