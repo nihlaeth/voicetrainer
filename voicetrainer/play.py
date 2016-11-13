@@ -23,7 +23,7 @@ async def get_qsynth_port() -> str:
 async def play_midi(port: str, midi: str) -> Process:
     """Start playing midi file."""
     return await create_subprocess_exec(
-        'pmidi', '-p', port, midi.encode('utf-8'))
+        'pmidi', '-p', port, midi.encode('iso-8859-1'))
 
 async def stop_midi(proc: Process) -> None:
     """Stop midi playback."""
