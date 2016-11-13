@@ -168,7 +168,7 @@ class Application(tk.Tk):
         sheet = ttk.Label(tab)
         self.sheets.append(sheet)
         sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W)
-        asyncio.ensure_future(self.update_sheet())
+        asyncio.ensure_future(self.update_sheet(tab_num=tab_num))
 
     def create_widgets(self):
         """Put some stuff up to look at."""
@@ -261,12 +261,14 @@ Do you still want to exit? The task will be aborted."""):
         self.update_compiler()
         # TODO: clear stale cache
 
-    async def update_sheet(self):
+    async def update_sheet(self, tab_num=None):
         """Display relevant sheet."""
-        png = await self.get_file()
+        if tab_num is None:
+            tab_num = self.tab_num
+        png = await self.get_file(tab_num=tab_num)
         if png not in self.image_cache:
             self.image_cache[png] = tk.PhotoImage(file=png)
-        self.sheets[self.tab_num].config(image=self.image_cache[png])
+        self.sheets[tab_num].config(image=self.image_cache[png])
 
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""
@@ -322,12 +324,14 @@ Do you still want to exit? The task will be aborted."""):
         else:
             await self.play()
 
-    async def get_file(self, midi: bool=False) -> str:
+    async def get_file(self, midi: bool=False, tab_num=None) -> str:
         """Assemble file_name, compile if non-existent."""
-        tab_name = self.notebook.tab(self.tab_num)['text']
-        pitch = self.control_vars[self.tab_num]['curr_pitch'].get()
-        bpm = self.bpm[self.tab_num].get()
-        sound = self.control_vars[self.tab_num]['sound'].get()
+        if tab_num is None:
+            tab_num = self.tab_num
+        tab_name = self.notebook.tab(tab_num)['text']
+        pitch = self.control_vars[tab_num]['curr_pitch'].get()
+        bpm = self.bpm[tab_num].get()
+        sound = self.control_vars[tab_num]['sound'].get()
         if midi:
             extension = "-midi.ly"
             file_name = join(
