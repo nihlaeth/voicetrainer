@@ -259,6 +259,7 @@ Do you still want to exit? The task will be aborted."""):
         await compile_all(self.data_path)
         self.compiler_count -= 1
         self.update_compiler()
+        # TODO: clear stale cache
 
     async def update_sheet(self):
         """Display relevant sheet."""
