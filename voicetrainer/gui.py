@@ -300,13 +300,16 @@ class Application(tk.Tk):
     async def play(self):
         """Play midi file."""
         midi = await self.get_file(midi=True)
-        # TODO: prevent spawning lots of port finding processes
         if self.port is None:
             try:
+                self.port = "..."
                 self.port = await get_qsynth_port()
             except Exception as err:
                 showerror("Could not find midi port", str(err))
                 raise
+        elif self.port == "...":
+            # already spawned port searching proc
+            return
         try:
             self.player = await play_midi(self.port, midi)
         except Exception as err:
