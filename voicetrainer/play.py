@@ -32,7 +32,7 @@ async def stop_midi(proc: Process) -> None:
 async def exec_on_midi_end(proc: Process, func: Callable) -> int:
     """Exec func when midi stops playing."""
     return_code = await proc.wait()
-    func()
+    await func()
     return return_code
 
 if __name__ == "__main__":
