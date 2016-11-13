@@ -270,13 +270,16 @@ class Application(tk.Tk):
                 "{}-{}-{}.png".format(tab_name, pitch, sound))
         if not isfile(file_name):
             try:
-                await compile_ex(
+                log = await compile_ex(
                     join(
                         self.data_path,
                         "{}{}".format(tab_name, extension)),
                     [bpm],
                     [pitch],
                     [sound])
+                if len(log[0][0]) > 0 or len(log[0][1]) > 1:
+                    showerror("lilyponderror", "{}\n{}".format(
+                        log[0][0], log[0][1]))
             except Exception as err:
                 showerror("Could not compile exercise", str(err))
         return file_name
