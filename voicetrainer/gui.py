@@ -156,7 +156,7 @@ class Application(tk.Tk):
         # sheet display
         sheet = ttk.Label(tab)
         self.sheets.append(sheet)
-        sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.E+tk.S+tk.W)
+        sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W)
         asyncio.ensure_future(self.update_sheet())
 
     def create_widgets(self):
