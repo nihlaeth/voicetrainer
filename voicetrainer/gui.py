@@ -1,7 +1,7 @@
 """Simple user interface."""
 from tkinter import ttk
 import tkinter as tk
-from tkinter.messagebox import showerror
+from tkinter.messagebox import showerror, askokcancel
 import asyncio
 from os.path import isfile, join, dirname, realpath
 from os import listdir
@@ -38,6 +38,9 @@ class Application(tk.Tk):
         self.sound_list = ["Mi", "Na", "Noe", "Nu", "No"]
         self.loop = loop
         self.protocol("WM_DELETE_WINDOW", self.close)
+
+        # compiler state
+        self.compiler_count = 0
 
         # midi state
         self.port = None
@@ -181,12 +184,13 @@ class Application(tk.Tk):
         self.menubar.add_cascade(label='File', menu=self.file_menu)
         self.file_menu.add_command(
             label='Recompile',
-            command=lambda: asyncio.ensure_future(
-                compile_all(self.data_path)))
-        self.file_menu.add_command(label='Quit', command=self.close)
+            command=lambda: asyncio.ensure_future(self.recompile()))
+        self.file_menu.add_command(
+            label='Quit',
+            command=lambda: self.close(user_action=True))
 
         self.rowconfigure(0, weight=1)
-        self.columnconfigure(0, weight=1)
+        self.columnconfigure(2, weight=1)
         self.notebook = ttk.Notebook(self)
         exercises = []
         for item in listdir(self.data_path):
@@ -201,16 +205,34 @@ class Application(tk.Tk):
             self.notebook.add(tab, text=ex)
             self.tabs.append(tab)
             self.create_tab(tab, len(self.tabs) - 1)
-        self.notebook.grid(column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
-        self.resize = ttk.Sizegrip(self).grid(row=1, sticky=tk.S+tk.E)
+        self.notebook.grid(
+            column=0, row=0, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.compiler_label = ttk.Label(self, text="Compiler:")
+        self.compiler_label.grid(row=1, column=0, sticky=tk.N+tk.E)
+        self.progress = ttk.Progressbar(
+            self,
+            mode='indeterminate',
+            orient=tk.HORIZONTAL)
+        self.progress.grid(row=1, column=1, sticky=tk.N+tk.W)
+        self.resize = ttk.Sizegrip(self)
+        self.resize.grid(row=1, column=2, sticky=tk.S+tk.E)
 
     def updater(self, interval):
         """Keep tkinter active and responsive."""
         self.update()
         self.loop.call_later(interval, self.updater, interval)
 
-    def close(self):
+    def close(self, user_action=False):
         """Close application and stop event loop."""
+        if user_action and self.compiler_count > 0:
+            # ask conformation before quit
+            if not askokcancel(
+                    "Uncompleted background task",
+                    """
+An exercise is still being compiled in the background.
+Do you still want to exit? The task will be aborted."""):
+                return
+        self.progress.stop()
         for task in asyncio.Task.all_tasks(loop=self.loop):
             task.cancel()
         self.loop.stop()
@@ -221,6 +243,22 @@ class Application(tk.Tk):
         """Return index of current tab."""
         tab_id = self.notebook.select()
         return self.notebook.index(tab_id)
+
+    def update_compiler(self):
+        """Set compiler progress bar status."""
+        if self.compiler_count > 0:
+            self.progress.start()
+        else:
+            self.progress.stop()
+
+    async def recompile(self):
+        """Recompile all exercises."""
+        self.compiler_count += 1
+        self.update_compiler()
+        # TODO: report results
+        await compile_all(self.data_path)
+        self.compiler_count -= 1
+        self.update_compiler()
 
     async def update_sheet(self):
         """Display relevant sheet."""
@@ -301,6 +339,8 @@ class Application(tk.Tk):
                 "{}-{}-{}.png".format(tab_name, pitch, sound))
         if not isfile(file_name):
             try:
+                self.compiler_count += 1
+                self.update_compiler()
                 log = await compile_ex(
                     join(
                         self.data_path,
@@ -314,6 +354,9 @@ class Application(tk.Tk):
             except Exception as err:
                 showerror("Could not compile exercise", str(err))
                 raise
+            finally:
+                self.compiler_count -= 1
+                self.update_compiler()
         return file_name
 
     async def play(self):
