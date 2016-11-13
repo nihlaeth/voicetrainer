@@ -35,6 +35,7 @@ class Application(tk.Tk):
         self.pitch_list = [note + octave for octave, note in product(
             [',', '', '\''],
             list("cdefgab"))]
+        self.sound_list = ["Mi", "Na", "Noe", "Nu", "No"]
         self.loop = loop
         self.protocol("WM_DELETE_WINDOW", self.close)
 
@@ -113,7 +114,7 @@ class Application(tk.Tk):
         sound = tk.OptionMenu(
             frame,
             soundvar,
-            *["Mi", "Na", "Noe", "Nu", "No"],
+            *self.sound_list,
             command=lambda _: asyncio.ensure_future(self.update_sheet()))
         self.controls[tab_num]['sound'] = sound
         sound.grid(column=0, row=0, sticky=tk.W+tk.N)
@@ -250,7 +251,15 @@ class Application(tk.Tk):
                 pitch_pos = choice(pitch_selection)
         elif curr_pos in pitch_selection:
             if pitch_selection.index(curr_pos) >= len(pitch_selection) - 1:
-                # TODO: cycle through sounds
+                curr_sound = self.control_vars[self.tab_num]['sound'].get()
+                sound_pos = self.sound_list.index(curr_sound)
+                if sound_pos < len(self.sound_list) - 1:
+                    self.control_vars[self.tab_num]['sound'].set(
+                        self.sound_list[sound_pos + 1])
+                else:
+                    self.control_vars[self.tab_num]['sound'].set(
+                        self.sound_list[0])
+                asyncio.ensure_future(self.update_sheet())
                 pitch_pos = pitch_selection[0]
             else:
                 pitch_pos = pitch_selection[
