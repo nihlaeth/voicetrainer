@@ -27,6 +27,9 @@ These parameters are not optional, though you might ignore a few by placing them
 * fluidsynth (qsynth recommended)
 * color-pitch.ly (https://github.com/nihlaeth/sheetmusic/blob/master/color-pitch.ly)
 
+## Installation
+pip install .
+
 ## Usage
 Make sure fluidsynth is running, then start by executing: python voicetrainer/gui.py
 
