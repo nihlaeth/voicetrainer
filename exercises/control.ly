@@ -45,9 +45,11 @@ exercise = {
   }
   \markup{
     \column{
-      \line accent on first note, steady volume for the rest
-      \line higher voice regions: think blowhole, tension in stomach
-      \line lower voice regions: sigh, sound between teeth, tension in bottom
+      \line { ~ accent on first note, steady volume for the rest }
+      \line { ~ no wobbling, good breath support all-over }
+      \line { ~ don't hesitate for highest note, be confident }
+      \line { ~ higher voice regions: think blowhole, tension in stomach }
+      \line { ~ lower voice regions: sigh, sound between teeth, tension in bottom }
     }
   }
   \paper{
