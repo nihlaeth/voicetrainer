@@ -24,7 +24,7 @@ class Application(tk.Tk):
     Inspired by: https://bugs.python.org/file43899/loop_tk3.py
     """
 
-    def __init__(self, loop, interval=.01):
+    def __init__(self, loop, interval=.05):
         super().__init__()
         self.data_path = join(dirname(realpath(__file__)), "../exercises/")
         self.pitch_list = [note + octave for octave, note in product(
