@@ -298,7 +298,6 @@ class Application(tk.Tk):
                 raise
         try:
             self.player = await play_midi(self.port, midi)
-            print(self.player)
         except Exception as err:
             showerror("Could not start midi playback", str(err))
             raise
@@ -314,7 +313,6 @@ class Application(tk.Tk):
 
     async def on_midi_stop(self):
         """Handle end of midi playback."""
-        print("on_midi_stop")
         self.player = None
         if self.stopping:
             self.play_next = False
@@ -323,6 +321,8 @@ class Application(tk.Tk):
         if self.play_next or self.control_vars[self.tab_num]['autonext'].get() == 1:
             self.play_next = False
             await self.next_()
+            return
+        self.control_vars[self.tab_num]['play_stop'].set("play")
 
 if __name__ == "__main__":
     # pylint: disable=invalid-name

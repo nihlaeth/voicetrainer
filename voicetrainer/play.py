@@ -23,20 +23,17 @@ async def get_qsynth_port() -> str:
 async def play_midi(port: str, midi: str) -> Process:
     """Start playing midi file."""
     return await create_subprocess_exec(
-        'pmidi', '-p', port, midi, stdout=PIPE, stderr=PIPE)
+        'pmidi', '-p', port, midi)
 
 async def stop_midi(proc: Process) -> None:
     """Stop midi playback."""
     proc.terminate()
 
-async def exec_on_midi_end(proc: Process, func: Callable) -> None:
+async def exec_on_midi_end(proc: Process, func: Callable) -> int:
     """Exec func when midi stops playing."""
-    # return_code = await proc.wait()
-    output, err = await proc.communicate()
-    print(bytes.decode(output))
-    print(bytes.decode(err))
+    return_code = await proc.wait()
     await func()
-    # return return_code
+    return return_code
 
 if __name__ == "__main__":
     # pylint: disable=invalid-name
