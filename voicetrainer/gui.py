@@ -45,6 +45,7 @@ class Application(tk.Tk):
         self.pitches = []
         self.sheets = []
         self.controls = []
+        self.image_cache = {}
         self.create_widgets()
         self.updater(interval)
 
@@ -177,11 +178,18 @@ class Application(tk.Tk):
         self.loop.stop()
         self.destroy()
 
+    @property
+    def tab_num(self):
+        """Return index of current tab."""
+        tab_id = self.notebook.select()
+        return self.notebook.index(tab_id)
+
     async def update_sheet(self):
         """Display relevant sheet."""
         png = await self.get_file()
-        tab_num = self.notebook.select()
-        self.sheets[tab_num].photo = tk.PhotoImage(file=png)
+        if png not in self.image_cache:
+            self.image_cache[png] = tk.PhotoImage(file=png)
+        self.sheets[self.tab_num].config(image=self.image_cache[png])
 
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""
@@ -194,14 +202,13 @@ class Application(tk.Tk):
 
     async def next_(self):
         """Skip to next exercise."""
-        tab_num = self.notebook.select()
-        curr_pitch = self.controls[tab_num]['curr_pitch'].get()
+        curr_pitch = self.control_vars[self.tab_num]['curr_pitch'].get()
         curr_pos = self.pitch_list.index(curr_pitch)
         pitch_pos = curr_pos
-        pitch_selection = self.pitches[tab_num].curselection()
+        pitch_selection = self.pitches[self.tab_num].curselection()
         if len(pitch_selection) == 0:
             return
-        random = True if self.controls[tab_num]['random'].get() == 1 else False
+        random = True if self.controls[self.tab_num]['random'].get() == 1 else False
         if random:
             while pitch_pos == curr_pos:
                 pitch_pos = choice(pitch_selection)
@@ -212,7 +219,7 @@ class Application(tk.Tk):
                 pitch_pos += 1
                 if pitch_pos >= len(self.pitch_list):
                     pitch_pos = 0
-        self.controls[tab_num]['curr_pos'].set(self.pitch_list[pitch_pos])
+        self.control_vars[self.tab_num]['curr_pitch'].set(self.pitch_list[pitch_pos])
 
     async def play_or_stop(self):
         """Play or stop midi."""
@@ -225,10 +232,9 @@ class Application(tk.Tk):
 
     async def get_file(self, midi: bool=False) -> str:
         """Assemble file_name, compile if non-existent."""
-        tab_num = self.notebook.select()
-        tab_name = self.notebook.tab(tab_num)['text']
-        pitch = self.controls[tab_num]['curr_pitch'].get()
-        bpm = self.bpm[tab_num].get()
+        tab_name = self.notebook.tab(self.tab_num)['text']
+        pitch = self.control_vars[self.tab_num]['curr_pitch'].get()
+        bpm = self.bpm[self.tab_num].get()
         # TODO: add sound selection
         sound = 'Mi'
         if midi:
@@ -270,10 +276,9 @@ class Application(tk.Tk):
         self.player = None
         if self.stopping:
             self.play_next = False
-            self.control_vars[self.notebook.select()]['play_stop'].set("play")
+            self.control_vars[self.tab_num]['play_stop'].set("play")
             return
-        tab_num = self.notebook.select()
-        if self.play_next or self.controls[tab_num]['autonext'].get() == 1:
+        if self.play_next or self.controls[self.tab_num]['autonext'].get() == 1:
             self.play_next = False
             await self.next_()
 
