@@ -297,7 +297,7 @@ class Application(tk.Tk):
             self.player = await play_midi(self.port, midi)
         except Exception as err:
             showerror("Could not start midi playback", str(err))
-        self.control_vars[self.notebook.select()]['play_stop'].set("stop")
+        self.control_vars[self.tab_num]['play_stop'].set("stop")
         asyncio.ensure_future(exec_on_midi_end(
             self.player,
             self.on_midi_stop))
