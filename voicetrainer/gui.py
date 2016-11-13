@@ -261,7 +261,9 @@ Do you still want to exit? The task will be aborted."""):
         await compile_all(self.data_path)
         self.compiler_count -= 1
         self.update_compiler()
-        # TODO: clear stale cache
+        self.image_cache = {}
+        for i in range(len(self.tabs)):
+            await self.update_sheet(tab_num=i)
 
     async def update_sheet(self, tab_num=None):
         """Display relevant sheet."""

@@ -35,7 +35,6 @@ Make sure fluidsynth is running, then start by executing: python voicetrainer/gu
 
 ## Problems
 * setup.py is incomplete: datadir is not specified and this whole thing should be started with an executable
-* cache is not refereshed after recompile - restart necessary to see changes in sheet music
 
 ## Planned features
 * settings storage in some kind of database
