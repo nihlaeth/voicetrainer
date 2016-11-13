@@ -231,6 +231,7 @@ class Application(tk.Tk):
                 pitch_pos = choice(pitch_selection)
         elif curr_pos in pitch_selection:
             if pitch_selection.index(curr_pos) >= len(pitch_selection) - 1:
+                # TODO: cycle through sounds
                 pitch_pos = pitch_selection[0]
             else:
                 pitch_pos = pitch_selection[pitch_selection.index(curr_pos) + 1]
@@ -292,12 +293,12 @@ class Application(tk.Tk):
         if self.port is None:
             try:
                 self.port = await get_qsynth_port()
-                print(self.port)
             except Exception as err:
                 showerror("Could not find midi port", str(err))
                 raise
         try:
             self.player = await play_midi(self.port, midi)
+            print(self.player)
         except Exception as err:
             showerror("Could not start midi playback", str(err))
             raise
@@ -313,6 +314,7 @@ class Application(tk.Tk):
 
     async def on_midi_stop(self):
         """Handle end of midi playback."""
+        print("on_midi_stop")
         self.player = None
         if self.stopping:
             self.play_next = False
