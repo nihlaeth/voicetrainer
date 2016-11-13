@@ -1,6 +1,7 @@
 """Simple user interface."""
 from tkinter import ttk
 import tkinter as tk
+from tkinter.messagebox import showerror
 import asyncio
 from os.path import isfile, join, dirname, realpath
 from os import listdir
@@ -12,6 +13,9 @@ from voicetrainer.compile import compile_ex
 
 # pylint: disable=too-many-instance-attributes,too-many-locals,too-many-statements
 # It's messy, but there simply too many references to keep alive.
+# pylint: disable=broad-except
+# because of asyncio exceptions are only displayed at exit, we want to give the
+# user immediate feedback.
 class Application(tk.Tk):
 
     """
@@ -187,7 +191,7 @@ class Application(tk.Tk):
 
     def close(self):
         """Close application and stop event loop."""
-        for task in asyncio.Task.all_tasks():
+        for task in asyncio.Task.all_tasks(loop=self.loop):
             task.cancel()
         self.loop.stop()
         self.destroy()
@@ -265,19 +269,31 @@ class Application(tk.Tk):
                 self.data_path,
                 "{}-{}-{}.png".format(tab_name, pitch, sound))
         if not isfile(file_name):
-            await compile_ex(
-                join(self.data_path, "{}{}".format(tab_name, extension)),
-                [bpm],
-                [pitch],
-                [sound])
+            try:
+                await compile_ex(
+                    join(
+                        self.data_path,
+                        "{}{}".format(tab_name, extension)),
+                    [bpm],
+                    [pitch],
+                    [sound])
+            except Exception as err:
+                showerror("Could not compile exercise", str(err))
         return file_name
 
     async def play(self):
         """Play midi file."""
         midi = await self.get_file(midi=True)
+        # TODO: prevent spawning lots of port finding processes
         if self.port is None:
-            self.port = await get_qsynth_port()
-        self.player = await play_midi(self.port, midi)
+            try:
+                self.port = await get_qsynth_port()
+            except Exception as err:
+                showerror("Could not find midi port", str(err))
+        try:
+            self.player = await play_midi(self.port, midi)
+        except Exception as err:
+            showerror("Could not start midi playback", str(err))
         self.control_vars[self.notebook.select()]['play_stop'].set("stop")
         asyncio.ensure_future(exec_on_midi_end(
             self.player,
