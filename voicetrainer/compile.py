@@ -22,7 +22,7 @@ async def compile_ex(
             proc = await create_subprocess_exec(
                 'lilypond',
                 '--loglevel=WARN',
-                '--output={}-{}bmp-{}'.format(
+                '--output={}-{}bpm-{}'.format(
                     file_name[:-8],  # minus '-midi.ly'
                     tempo,
                     pitch),
