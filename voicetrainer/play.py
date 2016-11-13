@@ -25,6 +25,7 @@ async def play_midi(port: str, midi: str) -> Process:
     """Start playing midi file."""
     # return await create_subprocess_exec(
     #     'pmidi', '-p', port, midi.encode('ascii'))
+    print(repr(midi))
     return await create_subprocess_shell(
         "pmidi -p {} {}".format(
             quote(port),
