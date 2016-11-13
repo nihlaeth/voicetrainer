@@ -10,6 +10,8 @@ from random import choice
 from voicetrainer.play import get_qsynth_port, play_midi, stop_midi, exec_on_midi_end
 from voicetrainer.compile import compile_ex
 
+# pylint: disable=too-many-instance-attributes,too-many-locals,too-many-statements
+# It's messy, but there simply too many references to keep alive.
 class Application(tk.Tk):
 
     """
@@ -216,8 +218,10 @@ class Application(tk.Tk):
             while pitch_pos == curr_pos:
                 pitch_pos = choice(pitch_selection)
         elif curr_pos in pitch_selection:
-            # TODO: check is we're not at end of pitch_selection
-            pitch_pos = pitch_selection[pitch_selection.index(curr_pos) + 1]
+            if pitch_selection.index(curr_pos) >= len(pitch_selection) - 1:
+                pitch_pos = pitch_selection[0]
+            else:
+                pitch_pos = pitch_selection[pitch_selection.index(curr_pos) + 1]
         else:
             while pitch_pos not in pitch_selection:
                 pitch_pos += 1
