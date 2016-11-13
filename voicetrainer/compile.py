@@ -55,7 +55,7 @@ async def compile_ex(
                     pitch=pitch,
                     pitch_noheight=pitch[0],
                     sound=sound)))
-        log.append((bytes.decode(outs), bytes.decode(errs)))
+        log.append(tuple(bytes.decode(outs), bytes.decode(errs)))
         if proc.returncode != 0:
             print(bytes.decode(errs))
     return log
