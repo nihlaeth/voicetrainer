@@ -282,6 +282,7 @@ class Application(tk.Tk):
                         log[0][0], log[0][1]))
             except Exception as err:
                 showerror("Could not compile exercise", str(err))
+                raise
         return file_name
 
     async def play(self):
@@ -293,10 +294,12 @@ class Application(tk.Tk):
                 self.port = await get_qsynth_port()
             except Exception as err:
                 showerror("Could not find midi port", str(err))
+                raise
         try:
             self.player = await play_midi(self.port, midi)
         except Exception as err:
             showerror("Could not start midi playback", str(err))
+            raise
         self.control_vars[self.tab_num]['play_stop'].set("stop")
         asyncio.ensure_future(exec_on_midi_end(
             self.player,
