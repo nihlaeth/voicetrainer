@@ -292,6 +292,7 @@ class Application(tk.Tk):
         if self.port is None:
             try:
                 self.port = await get_qsynth_port()
+                print(self.port)
             except Exception as err:
                 showerror("Could not find midi port", str(err))
                 raise

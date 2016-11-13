@@ -14,7 +14,8 @@ async def get_qsynth_port() -> str:
             raise OSError('pmidi not functioning {}'.format(err))
         output = bytes.decode(output).split('\n')
         for line in output:
-            if 'Qsynth' in line or 'qsynth' in line:
+            match = ['Qsynth', 'qsynth', 'FLUID']
+            if any([word in line for word in match]):
                 # extract port
                 return line.strip().split(' ')[0]
         await sleep(5)
