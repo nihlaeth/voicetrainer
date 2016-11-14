@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
     name='voicetrainer',
@@ -8,4 +7,5 @@ setup(
     description='midi voice exercises',
     author='nihlaeth',
     author_email='info@nihlaeth.nl',
-    packages=['voicetrainer'])
+    packages=find_packages(),
+    package_data={'voicetrainer': ['exercises/*']})

@@ -3,10 +3,11 @@ from tkinter import ttk
 import tkinter as tk
 from tkinter.messagebox import showerror, askokcancel
 import asyncio
-from os.path import isfile, join, dirname, realpath
+from os.path import isfile, join
 from os import listdir
 from itertools import product
 from random import choice
+from pkg_resources import resource_filename, Requirement
 
 from voicetrainer.play import (
     get_qsynth_port,
@@ -31,7 +32,11 @@ class Application(tk.Tk):
 
     def __init__(self, loop, interval=.05):
         super().__init__()
-        self.data_path = join(dirname(realpath(__file__)), "../exercises/")
+        # self.data_path = join(dirname(realpath(__file__)), "../exercises/")
+        # self.data_path = join(sys.prefix, 'share/voicetrainer')
+        self.data_path = resource_filename(
+            Requirement.parse("voicetrainer"),
+            'voicetrainer/exercises')
         self.pitch_list = [note + octave for octave, note in product(
             [',', '', '\''],
             list("cdefgab"))]

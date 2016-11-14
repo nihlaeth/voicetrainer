@@ -34,7 +34,7 @@ pip install .
 Make sure fluidsynth is running, then start by executing: python voicetrainer/gui.py
 
 ## Problems
-* setup.py is incomplete: datadir is not specified and this whole thing should be started with an executable
+* setup.py is incomplete: should be started with script
 
 ## Planned features
 * settings storage in some kind of database
