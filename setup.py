@@ -7,6 +7,7 @@ setup(
     description='midi voice exercises',
     author='nihlaeth',
     author_email='info@nihlaeth.nl',
+    python_requires='>=3.5',
     packages=find_packages(),
     package_data={'voicetrainer': ['exercises/*']},
     entry_points={
