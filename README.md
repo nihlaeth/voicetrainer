@@ -31,7 +31,7 @@ These parameters are not optional, though you might ignore a few by placing them
 pip install .
 
 ## Usage
-Make sure fluidsynth is running, then start by executing: python voicetrainer/gui.py
+Make sure fluidsynth is running, then start by executing: voicetrainer
 
 ## Problems
 None known at this time
