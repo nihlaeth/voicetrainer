@@ -7,7 +7,7 @@ from os.path import isfile, join
 from os import listdir
 from itertools import product
 from random import choice
-from pkg_resources import resource_filename, Requirement
+from pkg_resources import resource_filename, Requirement, cleanup_resources
 
 from voicetrainer.play import (
     get_qsynth_port,
@@ -423,3 +423,4 @@ def start():
         root.close()
     finally:
         loop.close()
+        cleanup_resources()
