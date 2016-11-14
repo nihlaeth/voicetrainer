@@ -32,8 +32,6 @@ class Application(tk.Tk):
 
     def __init__(self, loop, interval=.05):
         super().__init__()
-        # self.data_path = join(dirname(realpath(__file__)), "../exercises/")
-        # self.data_path = join(sys.prefix, 'share/voicetrainer')
         self.data_path = resource_filename(
             Requirement.parse("voicetrainer"),
             'voicetrainer/exercises')
@@ -415,13 +413,13 @@ Do you still want to exit? The task will be aborted."""):
             return
         self.control_vars[self.tab_num]['play_stop'].set("play")
 
-if __name__ == "__main__":
-    # pylint: disable=invalid-name
-    loop_ = asyncio.get_event_loop()
-    root = Application(loop_)
+def start():
+    """Start gui and event loop."""
+    loop = asyncio.get_event_loop()
+    root = Application(loop)
     try:
-        loop_.run_forever()
+        loop.run_forever()
     except KeyboardInterrupt:
         root.close()
     finally:
-        loop_.close()
+        loop.close()

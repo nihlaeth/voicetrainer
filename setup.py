@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+"""Installation script for voicetrainer."""
 from setuptools import setup, find_packages
 
 setup(
@@ -8,4 +8,7 @@ setup(
     author='nihlaeth',
     author_email='info@nihlaeth.nl',
     packages=find_packages(),
-    package_data={'voicetrainer': ['exercises/*']})
+    package_data={'voicetrainer': ['exercises/*']},
+    entry_points={
+        'gui_scripts': [
+            'voicetrainer = voicetrainer.gui:start']})
