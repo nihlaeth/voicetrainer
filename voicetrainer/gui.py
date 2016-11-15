@@ -404,6 +404,7 @@ Do you still want to exit? The task will be aborted."""):
         self.player = None
         if self.stopping:
             self.play_next = False
+            self.stopping = False
             self.control_vars[self.tab_num]['play_stop'].set("play")
             return
         if self.play_next or \
