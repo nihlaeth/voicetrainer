@@ -43,3 +43,4 @@ Make sure fluidsynth is running, then start by executing: voicetrainer
 * remove exercises
 * add mode for playing MIDI backing tracks
 * add gnu-solfege like mode for training interval recognition and such
+* allow selecting different midi synthesizers
