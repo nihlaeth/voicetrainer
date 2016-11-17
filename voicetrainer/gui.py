@@ -51,6 +51,7 @@ class Application(tk.Tk):
         self.player = None
         self.stopping = False
         self.play_next = False
+        self.repeat_once = False
 
         # gui elements storage
         self.notebook = None
@@ -115,7 +116,7 @@ class Application(tk.Tk):
         frame = ttk.Frame(tab)
         self.controls[tab_num]['frame'] = frame
         frame.grid(column=2, row=2, columnspan=2, sticky=tk.W+tk.N)
-        # sound pitch random autonext next play/stop
+        # sound pitch random autonext repeat_once next play/stop
 
         soundvar = tk.StringVar()
         soundvar.set("Mi")
@@ -153,12 +154,19 @@ class Application(tk.Tk):
         self.controls[tab_num]['autonext'] = autonext
         autonext.grid(column=3, row=0, sticky=tk.W+tk.N)
 
+        repeat = ttk.Button(
+            frame,
+            text="repeat once",
+            command=self.set_repeat_once)
+        self.controls[tab_num]['repeat'] = repeat
+        repeat.grid(column=4, row=0, sticky=tk.W+tk.N)
+
         next_ = ttk.Button(
             frame,
             text="next",
             command=lambda: asyncio.ensure_future(self.next_()))
         self.controls[tab_num]['next_'] = next_
-        next_.grid(column=4, row=0, sticky=tk.W+tk.N)
+        next_.grid(column=5, row=0, sticky=tk.W+tk.N)
 
         play_stop = tk.StringVar()
         play_stop.set("play")
@@ -320,6 +328,10 @@ Do you still want to exit? The task will be aborted."""):
         else:
             await self.play()
 
+    def set_repeat_once(self, _=None):
+        """Repeat this midi once, then continue."""
+        self.repeat_once = True
+
     async def next_(self):
         """Skip to next exercise."""
         curr_pitch = self.control_vars[self.tab_num]['curr_pitch'].get()
@@ -444,7 +456,11 @@ Do you still want to exit? The task will be aborted."""):
         if self.play_next or \
                 self.control_vars[self.tab_num]['autonext'].get() == 1:
             self.play_next = False
-            await self.next_()
+            if not self.repeat_once:
+                await self.next_()
+            else:
+                self.repeat_once = False
+                await self.play()
             return
         self.control_vars[self.tab_num]['play_stop'].set("play")
 
