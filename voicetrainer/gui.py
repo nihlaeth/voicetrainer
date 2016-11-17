@@ -171,7 +171,7 @@ class Application(tk.Tk):
             textvariable=play_stop,
             command=lambda: asyncio.ensure_future(self.play_or_stop()))
         self.tabs[tab_num]['play'] = play
-        play.grid(column=5, row=0, sticky=tk.W+tk.N)
+        play.grid(column=6, row=0, sticky=tk.W+tk.N)
 
         # sheet display
         sheet = ttk.Label(tab)
