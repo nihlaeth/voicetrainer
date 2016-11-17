@@ -37,4 +37,3 @@ Make sure fluidsynth is running, then start by executing: voicetrainer
 None known at this time
 
 ## Planned features
-* settings storage in some kind of database

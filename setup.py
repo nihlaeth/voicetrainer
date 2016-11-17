@@ -9,7 +9,7 @@ setup(
     author_email='info@nihlaeth.nl',
     python_requires='>=3.5',
     packages=find_packages(),
-    package_data={'voicetrainer': ['exercises/*']},
+    package_data={'voicetrainer': ['*.json', 'exercises/*']},
     entry_points={
         'gui_scripts': [
             'voicetrainer = voicetrainer.gui:start']})

@@ -7,6 +7,7 @@ from os.path import isfile, join
 from os import listdir
 from itertools import product
 from random import choice
+import json
 from pkg_resources import resource_filename, Requirement, cleanup_resources
 
 from voicetrainer.play import (
@@ -221,6 +222,7 @@ class Application(tk.Tk):
         self.progress.grid(row=1, column=1, sticky=tk.N+tk.W)
         self.resize = ttk.Sizegrip(self)
         self.resize.grid(row=1, column=2, sticky=tk.S+tk.E)
+        self.restore_state()
 
     def updater(self, interval):
         """Keep tkinter active and responsive."""
@@ -229,6 +231,7 @@ class Application(tk.Tk):
 
     def close(self, user_action=False):
         """Close application and stop event loop."""
+        self.save_state()
         if user_action and self.compiler_count > 0:
             # ask conformation before quit
             if not askokcancel(
@@ -248,6 +251,39 @@ Do you still want to exit? The task will be aborted."""):
         """Return index of current tab."""
         tab_id = self.notebook.select()
         return self.notebook.index(tab_id)
+
+    def save_state(self):
+        """Save settings to json file."""
+        data = {}
+        for i in range(len(self.tabs)):
+            tab_name = self.notebook.tab(i)['text']
+            data[tab_name] = {}
+            data[tab_name]['pitch_selection'] = self.pitches[i].curselection()
+            data[tab_name]['bpm'] = self.bpm[i].get()
+            data[tab_name]['sound'] = self.control_vars[i]['sound'].get()
+            data[tab_name]['autonext'] = self.control_vars[i]['autonext'].get()
+            data[tab_name]['random'] = self.control_vars[i]['random'].get()
+        with open(join(self.data_path, 'state.json'), 'w') as st_file:
+            st_file.write(json.dumps(data))
+
+    def restore_state(self):
+        """Restore saved settings."""
+        if not isfile(join(self.data_path, 'state.json')):
+            return
+        with open(join(self.data_path, 'state.json'), 'r') as st_file:
+            data = json.loads(st_file.read())
+        for i in range(len(self.tabs)):
+            tab_name = self.notebook.tab(i)['text']
+            if tab_name not in data:
+                continue
+            self.pitches[i].selection_clear(0, len(self.pitch_list) - 1)
+            for p_index in data[tab_name]['pitch_selection']:
+                self.pitches[i].selection_set(p_index)
+            self.bpm[i].set(data[tab_name]['bpm'])
+            self.control_vars[i]['sound'].set(data[tab_name]['sound'])
+            self.control_vars[i]['autonext'].set(
+                data[tab_name]['autonext'])
+            self.control_vars[i]['random'].set(data[tab_name]['random'])
 
     def update_compiler(self):
         """Set compiler progress bar status."""
