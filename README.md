@@ -9,15 +9,17 @@ So I started thinking about a solution. What I want from this is an exercise tha
 It says something about me that I'd rather dictate code one letter at a time for four days straight than click pause and play a few times in a big MIDI file, but here it is, so you won't have to repeat the feat. Enjoy, and feel free to make pull requests with your own exercises.
 
 ## Exercise definitions
-Exercises are defined in the exercises folder, and exist of two LilyPond files each ([name].ly and [name]-midi.ly). As you can probably guess, the first one is used to generate the sheet, and the second one to generate the MIDI. They are both written and LilyPond, though with a little customization of my own. Namely, they accept variables to make it easy to change the exercise without having to write 200 exercise definitions for all the possibilities.
+Exercises are defined in the voicetrainer/exercises folder. They are written in LilyPond, though with a little customization of my own. Namely, they accept variables to make it easy to change the exercise without having to write 200 exercise definitions for all the possibilities.
 
 The parameters are:
-* ${pitch} - pitch with octave attached (ex: c', usage: \transpose c ${pitch} { c e g | }): both midi and png
-* ${pitch_noheight} - just the pitch, for use in chordmode (ex: c, usage: \chordmode { ${pitch_noheight}:m }): only png
-* ${sound} - vocal, for use in lyricsmode (ex: Mi, usage: \lyricsmode { ${sound} }): only png
-* ${tempo} - bpm, for midi tempo (ex: 140, usage: \tempo ${temp}=4): only midi
+* ${pitch} - pitch with octave attached (ex: c', usage: \transpose c ${pitch} { c e g | })
+* ${pitch_noheight} - just the pitch, for use in chordmode (ex: c, usage: \chordmode { ${pitch_noheight}:m })
+* ${sound} - vocal, for use in lyricsmode (ex: Mi, usage: \lyricsmode { ${sound} })
+* ${tempo} - bpm, for midi tempo (ex: 140, usage: \tempo ${temp}=4)
 
-These parameters are not optional, though you might ignore a few by placing them in a hidden part of the sheet.
+Then there's the sheeton, sheetoff, midion and midioff variables which are used to differentiate between midi and visual output. See existing exercises for examples.
+
+These parameters are not optional, though you might ignore a few by placing them in a comment.
 
 ## Dependencies
 * python3.5 (no third party modules required)

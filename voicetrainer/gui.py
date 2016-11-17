@@ -200,9 +200,7 @@ class Application(tk.Tk):
         self.notebook = ttk.Notebook(self)
         exercises = []
         for item in listdir(self.data_path):
-            if isfile(join(self.data_path, item)) and \
-                    item.endswith('.ly') and not \
-                    item.endswith('-midi.ly'):
+            if isfile(join(self.data_path, item)) and item.endswith('.ly'):
                 exercises.append(item[:-3])
         for ex in exercises:
             tab = ttk.Frame(self.notebook)
@@ -375,13 +373,12 @@ Do you still want to exit? The task will be aborted."""):
         pitch = self.control_vars[tab_num]['curr_pitch'].get()
         bpm = self.bpm[tab_num].get()
         sound = self.control_vars[tab_num]['sound'].get()
+        extension = ".ly"
         if midi:
-            extension = "-midi.ly"
             file_name = join(
                 self.data_path,
                 "{}-{}bpm-{}.midi".format(tab_name, bpm, pitch))
         else:
-            extension = ".ly"
             file_name = join(
                 self.data_path,
                 "{}-{}-{}.png".format(tab_name, pitch, sound))
@@ -395,7 +392,8 @@ Do you still want to exit? The task will be aborted."""):
                         "{}{}".format(tab_name, extension)),
                     [bpm],
                     [pitch],
-                    [sound])
+                    [sound],
+                    midi)
                 if len(log[0][0]) > 0 or len(log[0][1]) > 1:
                     showerror("lilyponderror", "{}\n{}".format(
                         log[0][0], log[0][1]))
