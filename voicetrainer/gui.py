@@ -281,9 +281,10 @@ class Application(tk.Tk):
             # ask conformation before quit
             if not askokcancel(
                     "Uncompleted background task",
-                    """
-An exercise is still being compiled in the background.
-Do you still want to exit? The task will be aborted."""):
+                    (
+                        "An exercise is still being compiled in the "
+                        "background. Do you still want to exit? The "
+                        "task will be aborted.")):
                 return
         self.progress.stop()
         for task in asyncio.Task.all_tasks(loop=self.loop):
