@@ -1,7 +1,7 @@
 """Simple user interface."""
 from tkinter import ttk
 import tkinter as tk
-from tkinter.messagebox import showerror, askokcancel
+from tkinter.messagebox import showerror, askokcancel, showinfo
 import asyncio
 from os.path import isfile, join
 from os import listdir
@@ -45,6 +45,9 @@ class Application(tk.Tk):
 
         # compiler state
         self.compiler_count = 0
+
+        self.messages = []
+        self.messages_read = 0
 
         # midi state
         self.port = None
@@ -189,14 +192,30 @@ class Application(tk.Tk):
         # top menu
         self.menubar = tk.Menu(top)
         top['menu'] = self.menubar
+
         self.file_menu = tk.Menu(self.menubar)
         self.menubar.add_cascade(label='File', menu=self.file_menu)
         self.file_menu.add_command(
-            label='Recompile',
-            command=lambda: asyncio.ensure_future(self.recompile()))
+            label='Save state',
+            command=self.save_state)
         self.file_menu.add_command(
             label='Quit',
             command=lambda: self.close(user_action=True))
+
+        self.ex_menu = tk.Menu(self.menubar)
+        self.menubar.add_cascade(label='Exercises', menu=self.ex_menu)
+        self.ex_menu.add_command(
+            label='Add',
+            command=None)
+        self.ex_menu.add_command(
+            label='Delete',
+            command=None)
+        self.ex_menu.add_command(
+            label='Clear cache',
+            command=None)
+        self.ex_menu.add_command(
+            label='Precompile',
+            command=lambda: asyncio.ensure_future(self.recompile()))
 
         self.rowconfigure(0, weight=1)
         self.columnconfigure(2, weight=1)
@@ -209,15 +228,45 @@ class Application(tk.Tk):
             self.create_tab(ex)
         self.notebook.grid(
             column=0, row=0, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
-        self.compiler_label = ttk.Label(self, text="Compiler:")
-        self.compiler_label.grid(row=1, column=0, sticky=tk.N+tk.E)
+
+        self.separators = []
+
+        self.statusbar = ttk.Frame(self)
+        self.statusbar.grid(row=1, column=0, sticky=tk.N+tk.W)
+
+        self.compiler_label = ttk.Label(self.statusbar, text="Compiler:")
+        self.compiler_label.grid(row=0, column=0, sticky=tk.N+tk.E)
         self.progress = ttk.Progressbar(
-            self,
+            self.statusbar,
             mode='indeterminate',
             orient=tk.HORIZONTAL)
-        self.progress.grid(row=1, column=1, sticky=tk.N+tk.W)
+        self.progress.grid(row=0, column=1, sticky=tk.N+tk.W)
+
+        sep = ttk.Separator(self.statusbar, orient=tk.VERTICAL)
+        sep.grid(row=0, column=2)
+        self.separators.append(sep)
+
+        self.port_label_text = tk.StringVar()
+        self.port_label_text.set('pmidi port: None')
+        self.port_label = ttk.Label(
+            self.statusbar,
+            textvariable=self.port_label_text)
+        self.port_label.grid(row=0, column=3, sticky=tk.N+tk.W)
+
+        sep = ttk.Separator(self.statusbar, orient=tk.VERTICAL)
+        sep.grid(row=0, column=4)
+        self.separators.append(sep)
+
+        self.msg_text = tk.StringVar()
+        self.msg_text.set('messages')
+        self.msg_button = ttk.Button(
+            self.statusbar,
+            textvariable=self.msg_text,
+            command=self.display_messages)
+        self.msg_button.grid(row=0, column=5, sticky=tk.N+tk.W)
+
         self.resize = ttk.Sizegrip(self)
-        self.resize.grid(row=1, column=2, sticky=tk.S+tk.E)
+        self.resize.grid(row=1, column=1, sticky=tk.S+tk.E)
         self.restore_state()
 
     def updater(self, interval):
@@ -282,6 +331,17 @@ Do you still want to exit? The task will be aborted."""):
                 data[tab_name]['autonext'])
             self.tabs[i]['random'].set(data[tab_name]['random'])
 
+    def show_messages(self):
+        """Show if there unread messages."""
+        if len(self.messages) > self.messages_read:
+            self.msg_text.set('!!!Messages!!!')
+
+    def display_messages(self, _=None):
+        """Display all messages."""
+        showinfo('Messages', '\n'.join(self.messages))
+        self.messages_read = len(self.messages)
+        self.msg_text.set('Messages')
+
     def update_compiler(self):
         """Set compiler progress bar status."""
         if self.compiler_count > 0:
@@ -293,10 +353,16 @@ Do you still want to exit? The task will be aborted."""):
         """Recompile all exercises."""
         self.compiler_count += 1
         self.update_compiler()
-        # TODO: report results
-        await compile_all(self.data_path)
+        log = await compile_all(self.data_path)
+        for output, err in [
+                log_tuple for log_item in log for log_tuple in log_item]:
+            if len(output) > 0:
+                self.messages.append(output)
+            if len(err) > 0:
+                self.messages.append(err)
         self.compiler_count -= 1
         self.update_compiler()
+        self.show_messages()
         self.image_cache = {}
         for i in range(len(self.tabs)):
             await self.update_sheet(tab_num=i)
@@ -397,9 +463,11 @@ Do you still want to exit? The task will be aborted."""):
                     [pitch],
                     [sound],
                     midi)
-                if len(log[0][0]) > 0 or len(log[0][1]) > 1:
-                    showerror("lilyponderror", "{}\n{}".format(
-                        log[0][0], log[0][1]))
+                if len(log[0][0]) > 0:
+                    self.messages.append(log[0][0])
+                if len(log[0][1]) > 0:
+                    self.messages.append(log[0][1])
+                self.show_messages()
             except Exception as err:
                 showerror("Could not compile exercise", str(err))
                 raise
@@ -415,11 +483,15 @@ Do you still want to exit? The task will be aborted."""):
             try:
                 self.port = "..."
                 self.port = await get_qsynth_port()
+                self.port_text.set('pmidi port: {}'.format(self.port))
             except Exception as err:
                 showerror("Could not find midi port", str(err))
                 raise
         elif self.port == "...":
             # already spawned port searching proc
+            self.messages.append(
+                "Still searching for pmidi port, cancelled playback.")
+            self.show_messages()
             return
         try:
             self.player = await play_midi(self.port, midi)
