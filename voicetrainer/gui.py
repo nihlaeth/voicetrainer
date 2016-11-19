@@ -374,7 +374,7 @@ Do you still want to exit? The task will be aborted."""):
             tab_num = self.tab_num
         tab_name = self.notebook.tab(tab_num)['text']
         pitch = self.tabs[tab_num]['curr_pitch'].get()
-        bpm = self.tabs[tab_num]['bpm'].get()
+        bpm = int(self.tabs[tab_num]['bpm'].get())
         sound = self.tabs[tab_num]['sound'].get()
         extension = ".ly"
         if midi:
