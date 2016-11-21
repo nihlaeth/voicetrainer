@@ -1,7 +1,6 @@
 """Simple user interface."""
 from tkinter import ttk
 import tkinter as tk
-from tkinter.messagebox import askokcancel
 import asyncio
 from os.path import isfile, join
 from os import listdir
@@ -10,6 +9,7 @@ from random import choice
 import json
 from pkg_resources import resource_filename, Requirement, cleanup_resources
 
+from voicetrainer.aiotk import Root, ErrorDialog, OkCancelDialog, Messages
 from voicetrainer.play import (
     get_qsynth_port,
     play_midi,
@@ -24,146 +24,11 @@ from voicetrainer.compile import compile_ex, compile_all
 # because of asyncio exceptions are only displayed at exit, we
 # want to give the user immediate feedback.
 
-class Dialog:
+class MainWindow:
 
-    """Short lived secondary window for user communication."""
+    """Voicetrainer application."""
 
-    def __init__(self, root, data=None, on_close=None):
-        self.root = root
-        self.data = data
-        self.return_data = None
-        self.return_event = asyncio.Event()
-        self.on_close = on_close
-        self.top = tk.Toplevel(self.root)
-        self.frame = tk.Frame(self.top)
-        self.top.rowconfigure(0, weight=1)
-        self.top.columnconfigure(0, weight=1)
-
-        self.frame.rowconfigure(0, weight=1)
-        self.frame.columnconfigure(0, weight=1)
-        self.frame.grid(sticky=tk.N+tk.E+tk.S+tk.W)
-        self.create_widgets()
-
-    def create_widgets(self):
-        """Populate frame."""
-        pass
-
-    async def await_data(self):
-        """Sleep until data can be returned."""
-        await self.return_event.wait()
-        self.close_dialog()
-        return self.return_data
-
-    def close_dialog(self):
-        """Close this window."""
-        self.top.destroy()
-        if self.on_close is not None:
-            self.on_close(self.return_data)
-
-class OkCancelDialog(Dialog):
-
-    """Ask comfirmation."""
-
-    def create_widgets(self):
-        """Show question."""
-        self.top.title("Confirm")
-
-        self.label = ttk.Label(self.frame, text=self.data)
-        self.label.grid(row=0, column=0, columnspan=2)
-        self.ok_button = ttk.Button(
-            self.frame, text="Ok", command=self.confirm)
-        self.ok_button.grid(row=1, column=0)
-        self.cancel_button = ttk.Button(
-            self.frame, text="Cancel", command=self.cancel)
-        self.cancel_button.grid(row=1, column=1)
-
-    def confirm(self, _):
-        """User pressed ok."""
-        self.return_data = True
-        self.return_event.set()
-
-    def cancel(self, _):
-        """User pressed cancel."""
-        self.return_data = False
-        self.return_event.set()
-
-class ErrorDialog(Dialog):
-
-    """Display error."""
-
-    def create_widgets(self):
-        """Show error."""
-        self.top.title("Error")
-
-        self.label = ttk.Label(self.frame, text=self.data)
-        self.label.grid(row=0, column=0)
-        self.button = ttk.Button(
-            self.frame, text="OK", command=self.close_dialog)
-        self.button.grid(row=1, column=0)
-
-class Messages(Dialog):
-
-    """Display messages."""
-
-    def create_widgets(self):
-        """Show messages."""
-        self.top.title("Messages")
-
-        self.canvas = tk.Canvas(self.frame)
-        self.scrollframe = tk.Frame(self.canvas)
-        self.scrollframe.grid(row=0, column=0, sticky=tk.N+tk.E+tk.S+tk.W)
-
-        scrollbar = tk.Scrollbar(
-            self.frame, orient=tk.VERTICAL, command=self.canvas.yview)
-        self.scrollbar = scrollbar
-        scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S+tk.E)
-
-        self.canvas.configure(yscrollcommand=scrollbar.set)
-        self.canvas.create_window((0, 0), window=self.scrollframe, anchor='nw')
-        self.canvas.grid(row=0, column=0, sticky=tk.N+tk.E+tk.S+tk.W)
-        self.canvas.rowconfigure(0, weight=1)
-        self.canvas.columnconfigure(0, weight=1)
-        self.scrollframe.bind(
-            "<Configure>",
-            lambda _: self.canvas.configure(
-                scrollregion=self.canvas.bbox("all")))
-        self.scrollframe.rowconfigure(0, weight=1)
-        self.scrollframe.columnconfigure(0, weight=1)
-
-        self.strvar = tk.StringVar()
-        self.strvar.set("\n".join(self.data))
-        self.label = ttk.Label(
-            self.scrollframe,
-            textvariable=self.strvar)
-        self.label.grid(row=0, column=0, sticky=tk.N+tk.S+tk.W)
-
-        self.button = ttk.Button(
-            self.frame, text='Close', command=self.close_dialog)
-        self.button.grid(row=1, column=0)
-
-        self.resize = ttk.Sizegrip(self.frame)
-        self.resize.grid(row=1, column=1, sticky=tk.S+tk.E)
-
-    def update_data(self, data):
-        """New data."""
-        self.data = data
-        self.strvar.set('\n'.join(self.data))
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
-    def to_front(self):
-        """Bring window to front."""
-        self.top.lift()
-
-class Application(tk.Tk):
-
-    """
-    Async user interface.
-
-    Inspired by: https://bugs.python.org/file43899/loop_tk3.py
-    """
-
-    def __init__(self, loop, interval=.05):
-        super().__init__()
+    def __init__(self, root):
         self.data_path = resource_filename(
             Requirement.parse("voicetrainer"),
             'voicetrainer/exercises')
@@ -171,8 +36,7 @@ class Application(tk.Tk):
             [',', '', '\''],
             list("cdefgab"))]
         self.sound_list = ["Mi", "Na", "Noe", "Nu", "No"]
-        self.loop = loop
-        self.protocol("WM_DELETE_WINDOW", self.close)
+        self.root = root
 
         # compiler state
         self.compiler_count = 0
@@ -180,8 +44,6 @@ class Application(tk.Tk):
         self.messages = []
         self.messages_read = 0
         self.msg_window = None
-
-        self.dialogs = []
 
         # midi state
         self.port = None
@@ -191,12 +53,9 @@ class Application(tk.Tk):
         self.repeat_once = False
 
         # gui elements storage
-        self.notebook = None
-        self.resize = None
         self.tabs = []
         self.image_cache = {}
         self.create_widgets()
-        self.updater(interval)
 
     def create_tab(self, exercise: str) -> None:
         """Populate exercise tab."""
@@ -318,14 +177,18 @@ class Application(tk.Tk):
 
     def create_widgets(self):
         """Put some stuff up to look at."""
-        top = self.winfo_toplevel()
-        top.rowconfigure(0, weight=1)
-        top.columnconfigure(0, weight=1)
-        top.title("VoiceTrainer")
+        self.window = ttk.Frame(self.root)
+        self.window.rowconfigure(0, weight=1)
+        self.window.columnconfigure(2, weight=1)
+        self.window.grid(column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.top = self.window.winfo_toplevel()
+        self.top.rowconfigure(0, weight=1)
+        self.top.columnconfigure(0, weight=1)
+        self.top.title("VoiceTrainer")
 
-        # top menu
-        self.menubar = tk.Menu(top)
-        top['menu'] = self.menubar
+        # self.top menu
+        self.menubar = tk.Menu(self.top)
+        self.top['menu'] = self.menubar
 
         self.file_menu = tk.Menu(self.menubar)
         self.menubar.add_cascade(label='File', menu=self.file_menu)
@@ -334,7 +197,7 @@ class Application(tk.Tk):
             command=self.save_state)
         self.file_menu.add_command(
             label='Quit',
-            command=lambda: self.close(user_action=True))
+            command=lambda: asyncio.ensure_future(self.quit()))
 
         self.ex_menu = tk.Menu(self.menubar)
         self.menubar.add_cascade(label='Exercises', menu=self.ex_menu)
@@ -351,9 +214,7 @@ class Application(tk.Tk):
             label='Precompile',
             command=lambda: asyncio.ensure_future(self.recompile()))
 
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(2, weight=1)
-        self.notebook = ttk.Notebook(self)
+        self.notebook = ttk.Notebook(self.window)
         exercises = []
         for item in listdir(self.data_path):
             if isfile(join(self.data_path, item)) and item.endswith('.ly'):
@@ -365,7 +226,7 @@ class Application(tk.Tk):
 
         self.separators = []
 
-        self.statusbar = ttk.Frame(self)
+        self.statusbar = ttk.Frame(self.window)
         self.statusbar.grid(row=1, column=0, sticky=tk.N+tk.W)
 
         self.compiler_label = ttk.Label(self.statusbar, text="Compiler:")
@@ -399,38 +260,31 @@ class Application(tk.Tk):
             command=self.display_messages)
         self.msg_button.grid(row=0, column=5, sticky=tk.N+tk.W)
 
-        self.resize = ttk.Sizegrip(self)
+        self.resize = ttk.Sizegrip(self.window)
         self.resize.grid(row=1, column=2, sticky=tk.S+tk.E)
         self.restore_state()
 
-    def updater(self, interval):
-        """Keep tkinter active and responsive."""
-        self.update()
-        self.loop.call_later(interval, self.updater, interval)
-
-    def close(self, user_action=False):
-        """Close application and stop event loop."""
-        self.save_state()
-        if user_action and self.compiler_count > 0:
+    async def quit(self):
+        """Confirm exit."""
+        if self.compiler_count > 0:
             # ask conformation before quit
-            # XXX: find way to use Dialog class for this
-            if not askokcancel(
-                    "Uncompleted background task",
-                    (
-                        "An exercise is still being compiled in the "
-                        "background. Do you still want to exit? The "
-                        "task will be aborted.")):
+            confirm_exit = OkCancelDialog(
+                self.root,
+                (
+                    "Uncompleted background task\n"
+                    "An exercise is still being compiled in the "
+                    "background. Do you still want to exit? The "
+                    "task will be aborted."))
+            if not await confirm_exit.await_data():
                 return
+        self.close()
+
+    def close(self):
+        """Exit main application."""
+        self.save_state()
         self.progress.stop()
-        for window in self.dialogs:
-            # XXX: some of these are already closed, check this
-            window.close_dialog()
-        if self.msg_window is not None:
-            self.msg_window.close_dialog()
-        for task in asyncio.Task.all_tasks(loop=self.loop):
-            task.cancel()
-        self.loop.stop()
-        self.destroy()
+        self.top.destroy()
+        self.root.close()
 
     @property
     def tab_num(self):
@@ -483,7 +337,7 @@ class Application(tk.Tk):
         """Display all messages."""
         if self.msg_window is None:
             self.msg_window = Messages(
-                self,
+                self.root,
                 data=self.messages,
                 on_close=self.on_close_msg_window)
         else:
@@ -622,8 +476,8 @@ class Application(tk.Tk):
                     self.messages.append(log[0][1])
                 self.show_messages()
             except Exception as err:
-                self.dialogs.append(ErrorDialog(
-                    self,
+                self.root.register_window(ErrorDialog(
+                    self.root,
                     data="Could not compile exercise\n{}".format(str(err))))
                 raise
             finally:
@@ -638,10 +492,10 @@ class Application(tk.Tk):
             try:
                 self.port = "..."
                 self.port = await get_qsynth_port()
-                self.port_text.set('pmidi port: {}'.format(self.port))
+                self.port_label_text.set('pmidi port: {}'.format(self.port))
             except Exception as err:
-                self.dialogs.append(ErrorDialog(
-                    self,
+                self.root.register_window(ErrorDialog(
+                    self.root,
                     data="Could not find midi port\n{}".format(str(err))))
                 raise
         elif self.port == "...":
@@ -653,8 +507,8 @@ class Application(tk.Tk):
         try:
             self.player = await play_midi(self.port, midi)
         except Exception as err:
-            self.dialogs.append(ErrorDialog(
-                self,
+            self.root.register_window(ErrorDialog(
+                self.root,
                 data="Could not start midi playback\n{}".format(str(err))))
             raise
         self.tabs[self.tab_num]['play_stop'].set("stop")
@@ -689,11 +543,12 @@ class Application(tk.Tk):
 def start():
     """Start gui and event loop."""
     loop = asyncio.get_event_loop()
-    root = Application(loop)
+    root = Root(loop)
+    root.register_window(MainWindow(root))
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        root.close()
+        root.close(crash=True)
     finally:
         loop.close()
         cleanup_resources()
