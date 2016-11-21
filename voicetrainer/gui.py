@@ -1,7 +1,7 @@
 """Simple user interface."""
 from tkinter import ttk
 import tkinter as tk
-from tkinter.messagebox import showerror, askokcancel, showinfo
+from tkinter.messagebox import showerror, askokcancel
 import asyncio
 from os.path import isfile, join
 from os import listdir
@@ -18,11 +18,97 @@ from voicetrainer.play import (
 from voicetrainer.compile import compile_ex, compile_all
 
 # pylint: disable=too-many-instance-attributes,too-many-locals
-# pylint: disable=too-many-statements
+# pylint: disable=too-many-statements, too-many-public-methods
 # It's messy, but there simply too many references to keep alive.
 # pylint: disable=broad-except
 # because of asyncio exceptions are only displayed at exit, we
 # want to give the user immediate feedback.
+
+class Dialog:
+
+    """Short lived secondary window for user communication."""
+
+    def __init__(self, loop, root, data=None, on_close=None):
+        self.loop = loop
+        self.root = root
+        self.data = data
+        self.on_close = on_close
+        self.top = tk.Toplevel(self.root)
+        self.frame = tk.Frame(self.top)
+        self.create_widgets()
+
+    def create_widgets(self):
+        """Populate frame."""
+        pass
+
+    async def await_data(self):
+        """Sleep until data can be returned."""
+        pass
+
+    def close_dialog(self, return_data=None):
+        """Close this window."""
+        self.top.destroy()
+        if self.on_close is not None:
+            self.on_close(return_data)
+
+class Messages(Dialog):
+
+    """Display messages."""
+
+    def create_widgets(self):
+        """Show messages."""
+        self.top.rowconfigure(0, weight=1)
+        self.top.columnconfigure(0, weight=1)
+
+        self.frame.rowconfigure(0, weight=1)
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.grid(sticky=tk.N+tk.E+tk.S+tk.W)
+
+        self.canvas = tk.Canvas(self.frame)
+        self.scrollframe = tk.Frame(self.canvas)
+        self.scrollframe.grid(row=0, column=0, sticky=tk.N+tk.E+tk.S+tk.W)
+
+        scrollbar = tk.Scrollbar(
+            self.frame, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.scrollbar = scrollbar
+        scrollbar.grid(row=0, column=1, sticky=tk.N+tk.S+tk.E)
+
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+        self.canvas.create_window((0, 0), window=self.scrollframe, anchor='nw')
+        self.canvas.grid(row=0, column=0, sticky=tk.N+tk.E+tk.S+tk.W)
+        self.canvas.rowconfigure(0, weight=1)
+        self.canvas.columnconfigure(0, weight=1)
+        self.scrollframe.bind(
+            "<Configure>",
+            lambda _: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")))
+        self.scrollframe.rowconfigure(0, weight=1)
+        self.scrollframe.columnconfigure(0, weight=1)
+
+        self.strvar = tk.StringVar()
+        self.strvar.set("\n".join(self.data))
+        self.label = ttk.Label(
+            self.scrollframe,
+            textvariable=self.strvar)
+        self.label.grid(row=0, column=0, sticky=tk.N+tk.S+tk.W)
+
+        self.button = ttk.Button(
+            self.frame, text='Close', command=self.close_dialog)
+        self.button.grid(row=1, column=0)
+
+        self.resize = ttk.Sizegrip(self.frame)
+        self.resize.grid(row=1, column=1, sticky=tk.S+tk.E)
+
+    def update_data(self, data):
+        """New data."""
+        self.data = data
+        self.strvar.set('\n'.join(self.data))
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def to_front(self):
+        """Bring window to front."""
+        self.top.lift()
+
 class Application(tk.Tk):
 
     """
@@ -48,6 +134,7 @@ class Application(tk.Tk):
 
         self.messages = []
         self.messages_read = 0
+        self.msg_window = None
 
         # midi state
         self.port = None
@@ -266,7 +353,7 @@ class Application(tk.Tk):
         self.msg_button.grid(row=0, column=5, sticky=tk.N+tk.W)
 
         self.resize = ttk.Sizegrip(self)
-        self.resize.grid(row=1, column=1, sticky=tk.S+tk.E)
+        self.resize.grid(row=1, column=2, sticky=tk.S+tk.E)
         self.restore_state()
 
     def updater(self, interval):
@@ -336,12 +423,25 @@ class Application(tk.Tk):
         """Show if there unread messages."""
         if len(self.messages) > self.messages_read:
             self.msg_text.set('!!!Messages!!!')
+            if self.msg_window is not None:
+                self.msg_window.update_data(self.messages)
 
     def display_messages(self, _=None):
         """Display all messages."""
-        showinfo('Messages', '\n'.join(self.messages))
+        if self.msg_window is None:
+            self.msg_window = Messages(
+                self.loop,
+                self,
+                data=self.messages,
+                on_close=self.on_close_msg_window)
+        else:
+            self.msg_window.to_front()
         self.messages_read = len(self.messages)
         self.msg_text.set('Messages')
+
+    def on_close_msg_window(self, _):
+        """Messages window was closed."""
+        self.msg_window = None
 
     def update_compiler(self):
         """Set compiler progress bar status."""

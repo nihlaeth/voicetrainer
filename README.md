@@ -37,7 +37,7 @@ Make sure fluidsynth is running, then start by executing: voicetrainer
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
-* messages dialog needs scrollbar
+* dialogs freeze main window (except msg dialog)
 
 ## Planned features
 * add exercises through file dialog
