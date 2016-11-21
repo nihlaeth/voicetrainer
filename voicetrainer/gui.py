@@ -1,7 +1,7 @@
 """Simple user interface."""
 from tkinter import ttk
 import tkinter as tk
-from tkinter.messagebox import showerror, askokcancel
+from tkinter.messagebox import askokcancel
 import asyncio
 from os.path import isfile, join
 from os import listdir
@@ -28,13 +28,20 @@ class Dialog:
 
     """Short lived secondary window for user communication."""
 
-    def __init__(self, loop, root, data=None, on_close=None):
-        self.loop = loop
+    def __init__(self, root, data=None, on_close=None):
         self.root = root
         self.data = data
+        self.return_data = None
+        self.return_event = asyncio.Event()
         self.on_close = on_close
         self.top = tk.Toplevel(self.root)
         self.frame = tk.Frame(self.top)
+        self.top.rowconfigure(0, weight=1)
+        self.top.columnconfigure(0, weight=1)
+
+        self.frame.rowconfigure(0, weight=1)
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.grid(sticky=tk.N+tk.E+tk.S+tk.W)
         self.create_widgets()
 
     def create_widgets(self):
@@ -43,13 +50,56 @@ class Dialog:
 
     async def await_data(self):
         """Sleep until data can be returned."""
-        pass
+        await self.return_event.wait()
+        self.close_dialog()
+        return self.return_data
 
-    def close_dialog(self, return_data=None):
+    def close_dialog(self):
         """Close this window."""
         self.top.destroy()
         if self.on_close is not None:
-            self.on_close(return_data)
+            self.on_close(self.return_data)
+
+class OkCancelDialog(Dialog):
+
+    """Ask comfirmation."""
+
+    def create_widgets(self):
+        """Show question."""
+        self.top.title("Confirm")
+
+        self.label = ttk.Label(self.frame, text=self.data)
+        self.label.grid(row=0, column=0, columnspan=2)
+        self.ok_button = ttk.Button(
+            self.frame, text="Ok", command=self.confirm)
+        self.ok_button.grid(row=1, column=0)
+        self.cancel_button = ttk.Button(
+            self.frame, text="Cancel", command=self.cancel)
+        self.cancel_button.grid(row=1, column=1)
+
+    def confirm(self, _):
+        """User pressed ok."""
+        self.return_data = True
+        self.return_event.set()
+
+    def cancel(self, _):
+        """User pressed cancel."""
+        self.return_data = False
+        self.return_event.set()
+
+class ErrorDialog(Dialog):
+
+    """Display error."""
+
+    def create_widgets(self):
+        """Show error."""
+        self.top.title("Error")
+
+        self.label = ttk.Label(self.frame, text=self.data)
+        self.label.grid(row=0, column=0)
+        self.button = ttk.Button(
+            self.frame, text="OK", command=self.close_dialog)
+        self.button.grid(row=1, column=0)
 
 class Messages(Dialog):
 
@@ -57,12 +107,7 @@ class Messages(Dialog):
 
     def create_widgets(self):
         """Show messages."""
-        self.top.rowconfigure(0, weight=1)
-        self.top.columnconfigure(0, weight=1)
-
-        self.frame.rowconfigure(0, weight=1)
-        self.frame.columnconfigure(0, weight=1)
-        self.frame.grid(sticky=tk.N+tk.E+tk.S+tk.W)
+        self.top.title("Messages")
 
         self.canvas = tk.Canvas(self.frame)
         self.scrollframe = tk.Frame(self.canvas)
@@ -135,6 +180,8 @@ class Application(tk.Tk):
         self.messages = []
         self.messages_read = 0
         self.msg_window = None
+
+        self.dialogs = []
 
         # midi state
         self.port = None
@@ -366,6 +413,7 @@ class Application(tk.Tk):
         self.save_state()
         if user_action and self.compiler_count > 0:
             # ask conformation before quit
+            # XXX: find way to use Dialog class for this
             if not askokcancel(
                     "Uncompleted background task",
                     (
@@ -374,6 +422,11 @@ class Application(tk.Tk):
                         "task will be aborted.")):
                 return
         self.progress.stop()
+        for window in self.dialogs:
+            # XXX: some of these are already closed, check this
+            window.close_dialog()
+        if self.msg_window is not None:
+            self.msg_window.close_dialog()
         for task in asyncio.Task.all_tasks(loop=self.loop):
             task.cancel()
         self.loop.stop()
@@ -430,7 +483,6 @@ class Application(tk.Tk):
         """Display all messages."""
         if self.msg_window is None:
             self.msg_window = Messages(
-                self.loop,
                 self,
                 data=self.messages,
                 on_close=self.on_close_msg_window)
@@ -570,7 +622,9 @@ class Application(tk.Tk):
                     self.messages.append(log[0][1])
                 self.show_messages()
             except Exception as err:
-                showerror("Could not compile exercise", str(err))
+                self.dialogs.append(ErrorDialog(
+                    self,
+                    data="Could not compile exercise\n{}".format(str(err))))
                 raise
             finally:
                 self.compiler_count -= 1
@@ -586,7 +640,9 @@ class Application(tk.Tk):
                 self.port = await get_qsynth_port()
                 self.port_text.set('pmidi port: {}'.format(self.port))
             except Exception as err:
-                showerror("Could not find midi port", str(err))
+                self.dialogs.append(ErrorDialog(
+                    self,
+                    data="Could not find midi port\n{}".format(str(err))))
                 raise
         elif self.port == "...":
             # already spawned port searching proc
@@ -597,7 +653,9 @@ class Application(tk.Tk):
         try:
             self.player = await play_midi(self.port, midi)
         except Exception as err:
-            showerror("Could not start midi playback", str(err))
+            self.dialogs.append(ErrorDialog(
+                self,
+                data="Could not start midi playback\n{}".format(str(err))))
             raise
         self.tabs[self.tab_num]['play_stop'].set("stop")
         asyncio.ensure_future(exec_on_midi_end(
