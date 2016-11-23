@@ -4,12 +4,18 @@ import tkinter as tk
 import asyncio
 from os.path import isfile, join
 from os import listdir
+from pathlib import Path
 from itertools import product
 from random import choice
 import json
 from pkg_resources import resource_filename, Requirement, cleanup_resources
 
-from voicetrainer.aiotk import Root, ErrorDialog, OkCancelDialog, Messages
+from voicetrainer.aiotk import (
+    Root,
+    ErrorDialog,
+    OkCancelDialog,
+    Messages,
+    LoadFileDialog)
 from voicetrainer.play import (
     get_qsynth_port,
     play_midi,
@@ -203,10 +209,10 @@ class MainWindow:
         self.menubar.add_cascade(label='Exercises', menu=self.ex_menu)
         self.ex_menu.add_command(
             label='Add',
-            command=None)
+            command=lambda: asyncio.ensure_future(self.add_exercise()))
         self.ex_menu.add_command(
             label='Delete',
-            command=None)
+            command=lambda: asyncio.ensure_future(self.remove_exercise()))
         self.ex_menu.add_command(
             label='Clear cache',
             command=None)
@@ -349,6 +355,56 @@ class MainWindow:
         """Messages window was closed."""
         self.msg_window = None
 
+    async def add_exercise(self):
+        """Add new exercise."""
+        dialog = LoadFileDialog(
+            self.root,
+            dir_or_file='~',
+            pattern="*.ly")
+        file_name = await dialog.await_data()
+        if file_name is not None:
+            path = Path(file_name)
+            ex_name = path.stem
+            if not path.is_file():
+                ErrorDialog(
+                    self.root,
+                    data="{} is not a file".format(path))
+                return
+            content = path.read_text()
+            new_file = Path(
+                join(self.data_path, "{}.ly".format(ex_name)))
+            if new_file.is_file():
+                ErrorDialog(
+                    self.root,
+                    data="An exercise with name {} already exists.".format(
+                        ex_name))
+                return
+            new_file.touch()
+            new_file.write_text(content)
+            self.create_tab(ex_name)
+
+    async def remove_exercise(self):
+        """Remove exercise."""
+        tab_num = self.tab_num
+        tab_name = self.notebook.tab(tab_num)['text']
+        confirm = OkCancelDialog(
+            self.root,
+            data="Are you sure you want to delete {}? This cannot be undone.".format(
+                tab_name))
+        if not await confirm.await_data():
+            return
+        self.stopping = True
+        await self.stop()
+        tab = self.tabs[tab_num]['tab']
+        self.notebook.forget(tab)
+        tab.destroy()
+        del self.tabs[tab_num]
+        file_name = Path(self.data_path).joinpath(
+            "{}.ly".format(tab_name))
+        # pylint: disable=no-member
+        # does too!
+        file_name.unlink()
+
     def update_compiler(self):
         """Set compiler progress bar status."""
         if self.compiler_count > 0:
@@ -451,6 +507,7 @@ class MainWindow:
         sound = self.tabs[tab_num]['sound'].get()
         extension = ".ly"
         if midi:
+            # XXX: start using pathlib everywhere
             file_name = join(
                 self.data_path,
                 "{}-{}bpm-{}.midi".format(tab_name, bpm, pitch))
@@ -476,9 +533,9 @@ class MainWindow:
                     self.messages.append(log[0][1])
                 self.show_messages()
             except Exception as err:
-                self.root.register_window(ErrorDialog(
+                ErrorDialog(
                     self.root,
-                    data="Could not compile exercise\n{}".format(str(err))))
+                    data="Could not compile exercise\n{}".format(str(err)))
                 raise
             finally:
                 self.compiler_count -= 1
@@ -494,9 +551,9 @@ class MainWindow:
                 self.port = await get_qsynth_port()
                 self.port_label_text.set('pmidi port: {}'.format(self.port))
             except Exception as err:
-                self.root.register_window(ErrorDialog(
+                ErrorDialog(
                     self.root,
-                    data="Could not find midi port\n{}".format(str(err))))
+                    data="Could not find midi port\n{}".format(str(err)))
                 raise
         elif self.port == "...":
             # already spawned port searching proc
@@ -507,9 +564,9 @@ class MainWindow:
         try:
             self.player = await play_midi(self.port, midi)
         except Exception as err:
-            self.root.register_window(ErrorDialog(
+            ErrorDialog(
                 self.root,
-                data="Could not start midi playback\n{}".format(str(err))))
+                data="Could not start midi playback\n{}".format(str(err)))
             raise
         self.tabs[self.tab_num]['play_stop'].set("stop")
         asyncio.ensure_future(exec_on_midi_end(

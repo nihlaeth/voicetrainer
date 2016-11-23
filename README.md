@@ -39,8 +39,6 @@ Make sure fluidsynth is running, then start by executing: voicetrainer
 * it's possible to play 2 midi streams at the same time with the right timing
 
 ## Planned features
-* add exercises through file dialog
-* remove exercises
 * add mode for playing MIDI backing tracks
 * add gnu-solfege like mode for training interval recognition and such
 * allow selecting different midi synthesizers
