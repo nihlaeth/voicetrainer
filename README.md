@@ -35,8 +35,14 @@ pip install .
 ## Usage
 Make sure fluidsynth is running, then start by executing: voicetrainer
 
+## Todo
+* replace os.path with pathlib
+* refactor MainWindow: put exercise stuff in mixin to prepare for songs
+* fix docstring coverage for file dialogs
+
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
+* cycling through pitches sometimes does not work correctly: first couple produce null midi
 
 ## Planned features
 * add mode for playing MIDI backing tracks
