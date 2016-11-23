@@ -1,8 +1,7 @@
 """Compile lily exercise into png and midi."""
 from typing import List, Tuple
 from string import Template
-from os import listdir
-from os.path import isfile, join
+from pathlib import Path
 from itertools import product
 from asyncio import create_subprocess_exec, get_event_loop
 from asyncio.subprocess import PIPE
@@ -10,24 +9,22 @@ from pkg_resources import resource_filename, Requirement, cleanup_resources
 
 # pylint: disable=invalid-name,bad-continuation
 async def compile_ex(
-        file_name: str,
+        file_name: Path,
         tempos: List[int],
         pitches: List[str],
         sounds: List[str],
         midi: bool=False) -> List[Tuple[str, str]]:
     """Open exercise file, format, and compile with lilypond."""
-    with open(file_name, "r") as f:
-        exercise = Template(f.read())
+    exercise = Template(file_name.read_text())
     log = []
     if midi:
         for tempo, pitch in product(tempos, pitches):
+            output_filename = file_name.parents[0].joinpath(
+                "{}-bpm{}-{}".format(file_name.stem, tempo, pitch))
             proc = await create_subprocess_exec(
                 'lilypond',
                 '--loglevel=WARN',
-                '--output={}-{}bpm-{}'.format(
-                    file_name[:-8],  # minus '-midi.ly'
-                    tempo,
-                    pitch),
+                '--output={}'.format(output_filename),
                 '-',
                 stdin=PIPE,
                 stdout=PIPE,
@@ -44,15 +41,14 @@ async def compile_ex(
             log.append((bytes.decode(outs), bytes.decode(errs)))
     else:
         for pitch, sound in product(pitches, sounds):
+            output_filename = file_name.parents[0].joinpath(
+                "{}-{}-{}".format(file_name.stem, pitch, sound))
             proc = await create_subprocess_exec(
                 'lilypond',
                 '--loglevel=WARN',
                 '--format=png',
                 '--png',
-                '--output={}-{}-{}'.format(
-                    file_name[:-3],  # minus '.ly'
-                    pitch,
-                    sound),
+                '--output={}'.format(output_filename),
                 '-',
                 stdin=PIPE,
                 stdout=PIPE,
@@ -69,17 +65,15 @@ async def compile_ex(
             log.append((bytes.decode(outs), bytes.decode(errs)))
     return log
 
-async def compile_all(path: str) -> List[List[Tuple[str, str]]]:
+async def compile_all(path: Path) -> List[List[Tuple[str, str]]]:
     """Compile all exercises."""
-    exercises = []
+    if not path.is_dir():
+        raise Exception('{} is not a directory'.format(path))
     logs = []
-    for item in listdir(path):
-        if isfile(join(path, item)) and item.endswith('.ly'):
-            exercises.append(item)
-    for ex in exercises:
+    for exercise in path.glob('*.ly'):
         for midi in [True, False]:
             log = await compile_ex(
-                join(path, ex),
+                path.joinpath(exercise),
                 [i*10 for i in range(8, 17)],
                 [note + octave for note, octave in product(
                     list("cdefg"), [",", "", "'"])],
@@ -90,9 +84,9 @@ async def compile_all(path: str) -> List[List[Tuple[str, str]]]:
 
 if __name__ == "__main__":
     loop = get_event_loop()
-    data_path = resource_filename(
+    data_path = Path(resource_filename(
         Requirement.parse("voicetrainer"),
-        'voicetrainer/exercises')
+        'voicetrainer/exercises'))
     try:
         result = loop.run_until_complete(compile_all(data_path))
     finally:

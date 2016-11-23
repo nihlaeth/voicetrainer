@@ -2,8 +2,6 @@
 from tkinter import ttk
 import tkinter as tk
 import asyncio
-from os.path import isfile, join
-from os import listdir
 from pathlib import Path
 from itertools import product
 from random import choice
@@ -35,9 +33,9 @@ class MainWindow:
     """Voicetrainer application."""
 
     def __init__(self, root):
-        self.data_path = resource_filename(
+        self.data_path = Path(resource_filename(
             Requirement.parse("voicetrainer"),
-            'voicetrainer/exercises')
+            'voicetrainer/exercises'))
         self.pitch_list = [note + octave for octave, note in product(
             [',', '', '\''],
             list("cdefgab"))]
@@ -221,12 +219,8 @@ class MainWindow:
             command=lambda: asyncio.ensure_future(self.recompile()))
 
         self.notebook = ttk.Notebook(self.window)
-        exercises = []
-        for item in listdir(self.data_path):
-            if isfile(join(self.data_path, item)) and item.endswith('.ly'):
-                exercises.append(item[:-3])
-        for ex in exercises:
-            self.create_tab(ex)
+        for exercise in self.data_path.glob('*.ly'):
+            self.create_tab(exercise.stem)
         self.notebook.grid(
             column=0, row=0, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
 
@@ -309,15 +303,15 @@ class MainWindow:
             data[tab_name]['sound'] = self.tabs[i]['sound'].get()
             data[tab_name]['autonext'] = self.tabs[i]['autonext'].get()
             data[tab_name]['random'] = self.tabs[i]['random'].get()
-        with open(join(self.data_path, 'state.json'), 'w') as st_file:
-            st_file.write(json.dumps(data))
+        self.data_path.joinpath('state.json').write_text(
+            json.dumps(data))
 
     def restore_state(self):
         """Restore saved settings."""
-        if not isfile(join(self.data_path, 'state.json')):
+        state_file = self.data_path.joinpath('state.json')
+        if not state_file.is_file():
             return
-        with open(join(self.data_path, 'state.json'), 'r') as st_file:
-            data = json.loads(st_file.read())
+        data = json.loads(state_file.read_text())
         for i in range(len(self.tabs)):
             tab_name = self.notebook.tab(i)['text']
             if tab_name not in data:
@@ -371,8 +365,7 @@ class MainWindow:
                     data="{} is not a file".format(path))
                 return
             content = path.read_text()
-            new_file = Path(
-                join(self.data_path, "{}.ly".format(ex_name)))
+            new_file = self.data_path.joinpath("{}.ly".format(ex_name))
             if new_file.is_file():
                 ErrorDialog(
                     self.root,
@@ -507,21 +500,17 @@ class MainWindow:
         sound = self.tabs[tab_num]['sound'].get()
         extension = ".ly"
         if midi:
-            # XXX: start using pathlib everywhere
-            file_name = join(
-                self.data_path,
+            file_name = self.data_path.joinpath(
                 "{}-{}bpm-{}.midi".format(tab_name, bpm, pitch))
         else:
-            file_name = join(
-                self.data_path,
+            file_name = self.data_path.joinpath(
                 "{}-{}-{}.png".format(tab_name, pitch, sound))
-        if not isfile(file_name):
+        if not file_name.is_file():
             try:
                 self.compiler_count += 1
                 self.update_compiler()
                 log = await compile_ex(
-                    join(
-                        self.data_path,
+                    self.data_path.joinpath(
                         "{}{}".format(tab_name, extension)),
                     [bpm],
                     [pitch],
