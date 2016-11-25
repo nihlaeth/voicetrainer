@@ -20,7 +20,7 @@ async def compile_ex(
     if midi:
         for tempo, pitch in product(tempos, pitches):
             output_filename = file_name.parents[0].joinpath(
-                "{}-bpm{}-{}".format(file_name.stem, tempo, pitch))
+                "{}-{}bpm-{}".format(file_name.stem, tempo, pitch))
             proc = await create_subprocess_exec(
                 'lilypond',
                 '--loglevel=WARN',
