@@ -1,6 +1,7 @@
 """Play midi via fluidsynth."""
 from typing import Callable
 from os.path import dirname, join, realpath
+from pathlib import Path
 from asyncio import create_subprocess_exec, sleep, get_event_loop
 from asyncio.subprocess import PIPE, Process
 
@@ -20,10 +21,10 @@ async def get_qsynth_port() -> str:
                 return line.strip().split(' ')[0]
         await sleep(5)
 
-async def play_midi(port: str, midi: str) -> Process:
+async def play_midi(port: str, midi: Path) -> Process:
     """Start playing midi file."""
     return await create_subprocess_exec(
-        'pmidi', '-p', port, midi)
+        'pmidi', '-p', port, str(midi))
 
 async def stop_midi(proc: Process) -> None:
     """Stop midi playback."""
