@@ -19,7 +19,8 @@ from voicetrainer.play import (
     play_midi,
     stop_midi,
     exec_on_midi_end)
-from voicetrainer.compile import compile_ex, compile_all
+from voicetrainer.compile import compile_, compile_all
+from voicetrainer.compile_interface import FileType, Exercise
 
 # pylint: disable=too-many-instance-attributes,too-many-locals
 # pylint: disable=too-many-statements, too-many-public-methods, no-member
@@ -519,28 +520,23 @@ class MainWindow:
         pitch = self.tabs[tab_num]['curr_pitch'].get()
         bpm = int(self.tabs[tab_num]['bpm'].get())
         sound = self.tabs[tab_num]['sound'].get()
-        extension = ".ly"
-        if midi:
-            file_name = self.data_path.joinpath(
-                "{}-{}bpm-{}.midi".format(tab_name, bpm, pitch))
-        else:
-            file_name = self.data_path.joinpath(
-                "{}-{}-{}.png".format(tab_name, pitch, sound))
+        exercise = Exercise(
+            self.data_path,
+            tab_name,
+            pitch,
+            bpm,
+            sound)
+        file_type = FileType.midi if midi else FileType.png
+        file_name = exercise.get_filename(file_type)
         if not file_name.is_file():
             try:
                 self.compiler_count += 1
                 self.update_compiler()
-                log = await compile_ex(
-                    self.data_path.joinpath(
-                        "{}{}".format(tab_name, extension)),
-                    [bpm],
-                    [pitch],
-                    [sound],
-                    midi)
-                if len(log[0][0]) > 0:
-                    self.messages.append(log[0][0])
-                if len(log[0][1]) > 0:
-                    self.messages.append(log[0][1])
+                log = await compile_(exercise, file_type)
+                if len(log[0]) > 0:
+                    self.messages.append(log[0])
+                if len(log[1]) > 0:
+                    self.messages.append(log[1])
                 self.show_messages()
             except Exception as err:
                 ErrorDialog(
@@ -550,6 +546,10 @@ class MainWindow:
             finally:
                 self.compiler_count -= 1
                 self.update_compiler()
+        if not file_name.is_file():
+            ErrorDialog(
+                self.root,
+                data="Could not compile {}".format(str(file_name)))
         return file_name
 
     async def play(self):
