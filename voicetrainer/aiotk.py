@@ -2,7 +2,7 @@
 import tkinter as tk
 from tkinter import ttk
 import asyncio
-import os
+from pathlib import Path
 import fnmatch
 
 class Root(tk.Tk):
@@ -184,6 +184,7 @@ class Messages(Dialog):
 # pylint: disable=invalid-name
 dialogstates = {}
 
+# pylint: disable=no-member
 class FileDialog(Dialog):
 
     """
@@ -210,6 +211,7 @@ class FileDialog(Dialog):
     title = "File Selection Dialog"
 
     def create_widgets(self):
+        """Populate dialog with widgets."""
         self.directory = None
 
         self.top.title(self.title)
@@ -279,22 +281,21 @@ class FileDialog(Dialog):
             root,
             data=None,
             on_close=None,
-            dir_or_file=os.curdir,
+            dir_or_file=Path.cwd(),
             pattern="*",
-            default="",
             key=None):
         super().__init__(root, data=data, on_close=on_close)
         self.key = key
         if key and key in dialogstates:
-            self.directory, pattern = dialogstates[key]
+            self.directory, self.pattern = dialogstates[key]
         else:
-            dir_or_file = os.path.expanduser(dir_or_file)
-            if os.path.isdir(dir_or_file):
-                self.directory = dir_or_file
+            dir_or_file = dir_or_file.expanduser()
+            if dir_or_file.is_dir():
+                self.directory = dir_or_file.resolve()
             else:
-                self.directory, default = os.path.split(dir_or_file)
-        self.set_filter(self.directory, pattern)
-        self.set_selection(default)
+                self.directory = dir_or_file.parents[0].resolve()
+        self.set_filter(pattern)
+        self.set_selection(self.directory)
         self.filter_command()
         self.selection.focus_set()
         self.return_data = None
@@ -313,7 +314,10 @@ class FileDialog(Dialog):
         if self.key:
             directory, pattern = self.get_filter()
             if self.return_data:
-                directory = os.path.dirname(self.return_data)
+                if self.return_data.is_dir():
+                    directory = self.return_data
+                else:
+                    directory = self.return_data.parents[0]
             dialogstates[self.key] = directory, pattern
         self.close()
         return self.return_data
@@ -329,10 +333,10 @@ class FileDialog(Dialog):
 
     def dirs_select_event(self, _):
         """Directory selected."""
-        dir_, pat = self.get_filter()
         subdir = self.dirs.get('active')
-        dir_ = os.path.normpath(os.path.join(self.directory, subdir))
-        self.set_filter(dir_, pat)
+        self.directory = self.directory.joinpath(subdir).resolve()
+        self.set_selection(self.directory)
+        self.filter_command()
 
     def files_double_event(self, _):
         """Doubleclick on file."""
@@ -341,7 +345,7 @@ class FileDialog(Dialog):
     def files_select_event(self, _):
         """File selected."""
         file_ = self.files.get('active')
-        self.set_selection(file_)
+        self.set_selection(self.directory.joinpath(file_))
 
     def ok_event(self, _):
         """Return was pressed with file selected."""
@@ -352,66 +356,41 @@ class FileDialog(Dialog):
         self.quit(self.get_selection())
 
     def filter_command(self, _=None):
-        """Filter was changed."""
-        dir_, pat = self.get_filter()
-        try:
-            names = os.listdir(dir_)
-        except OSError:
-            self.root.bell()
-            return
-        self.directory = dir_
-        self.set_filter(dir_, pat)
-        names.sort()
-        subdirs = [os.pardir]
+        """Update viewport."""
+        subdirs = [Path('..')]
         matchingfiles = []
-        for name in names:
-            fullname = os.path.join(dir_, name)
-            if os.path.isdir(fullname):
-                subdirs.append(name)
-            elif fnmatch.fnmatch(name, pat):
-                matchingfiles.append(name)
+        for name in sorted(self.directory.glob('*')):
+            if name.is_dir():
+                subdirs.append(name.name)
+            elif fnmatch.fnmatch(name.name, self.pattern):
+                matchingfiles.append(name.name)
         self.dirs.delete(0, tk.END)
         for name in subdirs:
             self.dirs.insert(tk.END, name)
         self.files.delete(0, tk.END)
         for name in matchingfiles:
             self.files.insert(tk.END, name)
-        head, tail = os.path.split(self.get_selection())
-        if tail == os.curdir:
-            tail = ''
-        self.set_selection(tail)
-
-    def get_filter(self):
-        filter_ = self.filter.get()
-        filter_ = os.path.expanduser(filter_)
-        if filter_[-1:] == os.sep or os.path.isdir(filter_):
-            filter_ = os.path.join(filter_, "*")
-        return os.path.split(filter_)
 
     def get_selection(self):
-        file_ = self.selection.get()
-        file_ = os.path.expanduser(file_)
-        return file_
+        """Get seleted pach/file from widget."""
+        return Path(self.selection.get()).expanduser()
 
     def cancel_command(self, _=None):
+        """Exit without selecting file."""
         self.quit()
 
-    def set_filter(self, dir_, pat):
-        if not os.path.isabs(dir_):
-            try:
-                pwd = os.getcwd()
-            except OSError:
-                pwd = None
-            if pwd:
-                dir_ = os.path.join(pwd, dir_) 
-                dir_ = os.path.normpath(dir_) 
+    def set_filter(self, pattern: str):
+        """Update filter pattern."""
+        self.pattern = pattern
         self.filter.delete(0, tk.END)
-        self.filter.insert(
-            tk.END, os.path.join(dir_ or os.curdir, pat or "*"))
+        self.filter.insert(tk.END, pattern)
 
     def set_selection(self, file_):
+        """Update selection path in viewport."""
         self.selection.delete(0, tk.END)
-        self.selection.insert(tk.END, os.path.join(self.directory, file_))
+        self.selection.insert(
+            tk.END,
+            str(file_))
 
 class LoadFileDialog(FileDialog):
 
@@ -419,9 +398,9 @@ class LoadFileDialog(FileDialog):
 
     title = "Load File Selection Dialog"
 
-    async def ok_command(self):
+    async def ok_command(self, _=None):
         file_ = self.get_selection()
-        if not os.path.isfile(file_):
+        if not file_.is_file():
             self.root.bell()
         else:
             self.quit(file_)
@@ -432,21 +411,16 @@ class SaveFileDialog(FileDialog):
 
     title = "Save File Selection Dialog"
 
-    async def ok_command(self):
+    async def ok_command(self, _=None):
         file_ = self.get_selection()
-        if os.path.exists(file_):
-            if os.path.isdir(file_):
+        if file_.exists():
+            if file_.is_dir():
                 self.root.bell()
                 return
             confirm_dialog = OkCancelDialog(
                 self.root,
-                data="Overwrite existing file_ %r?" % (file_,))
+                data="Overwrite existing file {}?".format(file_))
             confirm_overwrite = await confirm_dialog.await_data()
             if not confirm_overwrite:
-                return
-        else:
-            head, tail = os.path.split(file_)
-            if not os.path.isdir(head):
-                self.root.bell()
                 return
         self.quit(file_)

@@ -353,7 +353,7 @@ class MainWindow:
         """Add new exercise."""
         dialog = LoadFileDialog(
             self.root,
-            dir_or_file='~',
+            dir_or_file=Path('~'),
             pattern="*.ly")
         file_name = await dialog.await_data()
         if file_name is not None:
