@@ -3,7 +3,7 @@ from tkinter import ttk
 import tkinter as tk
 import asyncio
 from pathlib import Path
-from itertools import product
+from itertools import product, chain
 from random import choice
 import json
 from pkg_resources import resource_filename, Requirement, cleanup_resources
@@ -22,7 +22,7 @@ from voicetrainer.play import (
 from voicetrainer.compile import compile_ex, compile_all
 
 # pylint: disable=too-many-instance-attributes,too-many-locals
-# pylint: disable=too-many-statements, too-many-public-methods
+# pylint: disable=too-many-statements, too-many-public-methods, no-member
 # It's messy, but there simply too many references to keep alive.
 # pylint: disable=broad-except
 # because of asyncio exceptions are only displayed at exit, we
@@ -213,7 +213,7 @@ class MainWindow:
             command=lambda: asyncio.ensure_future(self.remove_exercise()))
         self.ex_menu.add_command(
             label='Clear cache',
-            command=None)
+            command=lambda: asyncio.ensure_future(self.clear_cache()))
         self.ex_menu.add_command(
             label='Precompile',
             command=lambda: asyncio.ensure_future(self.recompile()))
@@ -419,6 +419,27 @@ class MainWindow:
         self.compiler_count -= 1
         self.update_compiler()
         self.show_messages()
+        self.image_cache = {}
+        for i in range(len(self.tabs)):
+            await self.update_sheet(tab_num=i)
+
+    async def clear_cache(self):
+        """Remove all compiled files."""
+        # confirm
+        confirm_remove = OkCancelDialog(
+            self.root,
+            "This will remove all compiled files. Are you sure?")
+        if not await confirm_remove.await_data():
+            return
+
+        # remove files
+        for file_ in chain(
+                self.data_path.glob("*.midi"),
+                self.data_path.glob("*.png"),
+                self.data_path.glob("*.pdf")):
+            file_.unlink()
+
+        # clear image_cache and display new sheets
         self.image_cache = {}
         for i in range(len(self.tabs)):
             await self.update_sheet(tab_num=i)
