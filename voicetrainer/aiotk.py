@@ -181,32 +181,11 @@ class Messages(Dialog):
 
 # file dialogs adapted from:
 # https://hg.python.org/cpython/file/tip/Lib/tkinter/filedialog.py
-# pylint: disable=invalid-name
-dialogstates = {}
 
 # pylint: disable=no-member
 class FileDialog(Dialog):
 
-    """
-    Standard file selection dialog -- no checks on selected file.
-
-    Usage:
-
-        d = FileDialog(master)
-        fname = d.go(dir_or_file, pattern, default, key)
-        if fname is None: ...canceled...
-        else: ...open file...
-
-    All arguments to go() are optional.
-
-    The 'key' argument specifies a key in the global dictionary
-    'dialogstates', which keeps track of the values for the directory
-    and pattern arguments, overriding the values passed in (it does
-    not keep track of the default argument!).  If no key is specified,
-    the dialog keeps no memory of previous state.  Note that memory is
-    kept even when the dialog is canceled.  (All this emulates the
-    behavior of the Macintosh file selection dialogs.)
-    """
+    """Standard file selection dialog -- no checks on selected file."""
 
     title = "File Selection Dialog"
 
@@ -283,19 +262,18 @@ class FileDialog(Dialog):
             on_close=None,
             dir_or_file=Path.cwd(),
             pattern="*",
-            key=None):
+            default=None):
         super().__init__(root, data=data, on_close=on_close)
-        self.key = key
-        if key and key in dialogstates:
-            self.directory, self.pattern = dialogstates[key]
+        dir_or_file = dir_or_file.expanduser()
+        if dir_or_file.is_dir():
+            self.directory = dir_or_file.resolve()
         else:
-            dir_or_file = dir_or_file.expanduser()
-            if dir_or_file.is_dir():
-                self.directory = dir_or_file.resolve()
-            else:
-                self.directory = dir_or_file.parents[0].resolve()
+            self.directory = dir_or_file.parents[0].resolve()
         self.set_filter(pattern)
-        self.set_selection(self.directory)
+        if default is not None:
+            self.set_selection(self.directory.joinpath(default))
+        else:
+            self.set_selection(self.directory)
         self.filter_command()
         self.selection.focus_set()
         self.return_data = None
@@ -311,15 +289,6 @@ class FileDialog(Dialog):
     async def await_data(self):
         """Sleep until data can be returned."""
         await self.return_event.wait()
-        if self.key:
-            directory, pattern = self.get_filter()
-            if self.return_data:
-                if self.return_data.is_dir():
-                    directory = self.return_data
-                else:
-                    directory = self.return_data.parents[0]
-            dialogstates[self.key] = directory, pattern
-        self.close()
         return self.return_data
 
     def quit(self, how=None):
@@ -357,6 +326,8 @@ class FileDialog(Dialog):
 
     def filter_command(self, _=None):
         """Update viewport."""
+        # fetch filter from user
+        self.pattern = self.filter.get()
         subdirs = [Path('..')]
         matchingfiles = []
         for name in sorted(self.directory.glob('*')):
