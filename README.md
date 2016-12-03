@@ -30,19 +30,23 @@ These parameters are not optional, though you might ignore a few by placing them
 * color-pitch.ly (https://github.com/nihlaeth/sheetmusic/blob/master/color-pitch.ly)
 
 ## Installation
+```
 pip install .
+```
 
 ## Usage
-Make sure fluidsynth is running, then start by executing: voicetrainer
+Make sure fluidsynth is running, then start by executing:
+```
+voicetrainer
+```
 
 ## Todo
-* move variable to filename translation to separate object to prevent future bugs and provide flexibility
 * refactor MainWindow: put exercise stuff in mixin to prepare for songs
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
 
 ## Planned features
-* add export pdf option
+* add export pdf and lily option
 * add mode for playing MIDI backing tracks
 * allow selecting different midi synthesizers
