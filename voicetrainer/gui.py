@@ -9,9 +9,12 @@ from pkg_resources import resource_filename, Requirement, cleanup_resources
 from voicetrainer.aiotk import (
     Root,
     OkCancelDialog,
+    ErrorDialog,
     Messages)
 from voicetrainer.play import stop_midi
 from voicetrainer.exercise import ExerciseMixin
+from voicetrainer.compile import compile_
+from voicetrainer.compile_interface import FileType, Exercise
 
 # pylint: disable=too-many-instance-attributes,too-many-locals
 # pylint: disable=too-many-statements, too-many-public-methods, no-member
@@ -181,6 +184,36 @@ class MainWindow(ExerciseMixin):
             self.progress.start()
         else:
             self.progress.stop()
+
+    async def get_file(
+            self,
+            interface: Exercise,
+            file_type: FileType=FileType.png) -> str:
+        """Assemble file_name, compile if non-existent."""
+        file_name = interface.get_filename(file_type)
+        if not file_name.is_file():
+            try:
+                self.compiler_count += 1
+                self.update_compiler()
+                log = await compile_(interface, file_type)
+                if len(log[0]) > 0:
+                    self.messages.append(log[0])
+                if len(log[1]) > 0:
+                    self.messages.append(log[1])
+                self.show_messages()
+            except Exception as err:
+                ErrorDialog(
+                    self.root,
+                    data="Could not compile exercise\n{}".format(str(err)))
+                raise
+            finally:
+                self.compiler_count -= 1
+                self.update_compiler()
+        if not file_name.is_file():
+            ErrorDialog(
+                self.root,
+                data="Could not compile {}".format(str(file_name)))
+        return file_name
 
     async def stop(self):
         """Stop midi regardless of state."""

@@ -18,7 +18,7 @@ from voicetrainer.play import (
     get_qsynth_port,
     play_midi,
     exec_on_midi_end)
-from voicetrainer.compile import compile_, compile_all
+from voicetrainer.compile import compile_all
 from voicetrainer.compile_interface import FileType, Exercise
 
 # pylint: disable=too-many-instance-attributes,too-many-locals
@@ -277,19 +277,25 @@ class ExerciseMixin:
         for i in range(len(self.ex_tabs)):
             await ExerciseMixin.update_sheet(self, tab_num=i)
 
-    async def export(self, file_type: FileType):
-        """Export compiled data."""
-        # get interface
-        tab_name = self.ex_notebook.tab(self.ex_num)['text']
-        pitch = self.ex_tabs[self.ex_num]['curr_pitch'].get()
-        bpm = int(self.ex_tabs[self.ex_num]['bpm'].get())
-        sound = self.ex_tabs[self.ex_num]['sound'].get()
-        exercise = Exercise(
+    def get_ex_interface(self, tab_num=None):
+        """Return exercise interface."""
+        if tab_num is None:
+            tab_num = self.ex_num
+        tab_name = self.ex_notebook.tab(tab_num)['text']
+        pitch = self.ex_tabs[tab_num]['curr_pitch'].get()
+        bpm = int(self.ex_tabs[tab_num]['bpm'].get())
+        sound = self.ex_tabs[tab_num]['sound'].get()
+        return Exercise(
             self.ex_data_path,
             tab_name,
             pitch,
             bpm,
             sound)
+
+    async def export(self, file_type: FileType):
+        """Export compiled data."""
+        # get interface
+        exercise = ExerciseMixin.get_ex_interface(self)
 
         # get save_path
         file_name = exercise.get_filename(file_type)
@@ -307,29 +313,8 @@ class ExerciseMixin:
             save_path.write_text(exercise.get_final_lily_code(file_type))
             Dialog(self.root, data="Export complete")
             return
-        if not file_name.is_file():
-            try:
-                self.compiler_count += 1
-                self.update_compiler()
-                log = await compile_(exercise, file_type)
-                if len(log[0]) > 0:
-                    self.messages.append(log[0])
-                if len(log[1]) > 0:
-                    self.messages.append(log[1])
-                self.show_messages()
-            except Exception as err:
-                ErrorDialog(
-                    self.root,
-                    data="Could not compile exercise\n{}".format(str(err)))
-                raise
-            finally:
-                self.compiler_count -= 1
-                self.update_compiler()
-        if not file_name.is_file():
-            ErrorDialog(
-                self.root,
-                data="Could not compile {}".format(str(file_name)))
-            return
+        self.get_file(exercise, file_type)
+
         save_path.write_bytes(file_name.read_bytes())
         Dialog(self.root, data="Export complete")
 
@@ -395,7 +380,7 @@ class ExerciseMixin:
         """Display relevant sheet."""
         if tab_num is None:
             tab_num = self.ex_num
-        png = await ExerciseMixin.get_file(self, tab_num=tab_num)
+        png = await self.get_file(ExerciseMixin.get_ex_interface(self, tab_num))
         if png not in self.ex_image_cache:
             self.ex_image_cache[png] = tk.PhotoImage(file=png)
         self.ex_tabs[tab_num]['sheet'].config(image=self.ex_image_cache[png])
@@ -458,49 +443,11 @@ class ExerciseMixin:
         else:
             await ExerciseMixin.play(self)
 
-    async def get_file(self, midi: bool=False, tab_num=None) -> str:
-        """Assemble file_name, compile if non-existent."""
-        if tab_num is None:
-            tab_num = self.ex_num
-        tab_name = self.ex_notebook.tab(tab_num)['text']
-        pitch = self.ex_tabs[tab_num]['curr_pitch'].get()
-        bpm = int(self.ex_tabs[tab_num]['bpm'].get())
-        sound = self.ex_tabs[tab_num]['sound'].get()
-        exercise = Exercise(
-            self.ex_data_path,
-            tab_name,
-            pitch,
-            bpm,
-            sound)
-        file_type = FileType.midi if midi else FileType.png
-        file_name = exercise.get_filename(file_type)
-        if not file_name.is_file():
-            try:
-                self.compiler_count += 1
-                self.update_compiler()
-                log = await compile_(exercise, file_type)
-                if len(log[0]) > 0:
-                    self.messages.append(log[0])
-                if len(log[1]) > 0:
-                    self.messages.append(log[1])
-                self.show_messages()
-            except Exception as err:
-                ErrorDialog(
-                    self.root,
-                    data="Could not compile exercise\n{}".format(str(err)))
-                raise
-            finally:
-                self.compiler_count -= 1
-                self.update_compiler()
-        if not file_name.is_file():
-            ErrorDialog(
-                self.root,
-                data="Could not compile {}".format(str(file_name)))
-        return file_name
-
     async def play(self):
         """Play midi file."""
-        midi = await ExerciseMixin.get_file(self, midi=True)
+        midi = await self.get_file(
+            ExerciseMixin.get_ex_interface(self),
+            FileType.midi)
         if self.port is None:
             try:
                 self.port = "..."
