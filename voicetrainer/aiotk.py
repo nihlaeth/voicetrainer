@@ -289,6 +289,7 @@ class FileDialog(Dialog):
     async def await_data(self):
         """Sleep until data can be returned."""
         await self.return_event.wait()
+        self.close()
         return self.return_data
 
     def quit(self, how=None):
