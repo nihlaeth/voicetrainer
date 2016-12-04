@@ -376,6 +376,18 @@ class ExerciseMixin:
         if not await confirm_remove.await_data():
             return
 
+        # remove files
+        for file_ in chain(
+                self.data_path.glob("*.midi"),
+                self.data_path.glob("*.png"),
+                self.data_path.glob("*.pdf")):
+            file_.unlink()
+
+        # clear image_cache and display new sheets
+        self.ex_image_cache = {}
+        for i in range(len(self.ex_tabs)):
+            await ExerciseMixin.update_sheet(self, tab_num=i)
+
     async def update_sheet(self, tab_num=None):
         """Display relevant sheet."""
         if tab_num is None:
