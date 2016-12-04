@@ -41,7 +41,6 @@ voicetrainer
 ```
 
 ## Todo
-* start port finding from main class
 * put state file in config dir, not in exercises
 * add interface class for songs
 * nest notebooks

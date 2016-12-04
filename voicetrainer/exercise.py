@@ -15,7 +15,6 @@ from voicetrainer.aiotk import (
     SaveFileDialog,
     LoadFileDialog)
 from voicetrainer.play import (
-    get_qsynth_port,
     play_midi,
     exec_on_midi_end)
 from voicetrainer.compile import compile_all
@@ -461,17 +460,6 @@ class ExerciseMixin:
             ExerciseMixin.get_ex_interface(self),
             FileType.midi)
         if self.port is None:
-            try:
-                self.port = "..."
-                self.port = await get_qsynth_port()
-                self.port_label_text.set('pmidi port: {}'.format(self.port))
-            except Exception as err:
-                ErrorDialog(
-                    self.root,
-                    data="Could not find midi port\n{}".format(str(err)))
-                raise
-        elif self.port == "...":
-            # already spawned port searching proc
             self.messages.append(
                 "Still searching for pmidi port, cancelled playback.")
             self.show_messages()

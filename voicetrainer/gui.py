@@ -11,7 +11,7 @@ from voicetrainer.aiotk import (
     OkCancelDialog,
     ErrorDialog,
     Messages)
-from voicetrainer.play import stop_midi
+from voicetrainer.play import stop_midi, get_qsynth_port
 from voicetrainer.exercise import ExerciseMixin
 from voicetrainer.compile import compile_
 from voicetrainer.compile_interface import FileType, Exercise
@@ -42,6 +42,7 @@ class MainWindow(ExerciseMixin):
 
         # midi state
         self.port = None
+        asyncio.ensure_future(self.find_port())
         self.player = None
         self.stopping = False
         self.play_next = False
@@ -53,6 +54,17 @@ class MainWindow(ExerciseMixin):
         ExerciseMixin.__init__(self)
 
         self.restore_state()
+
+    async def find_port(self):
+        """Find qsynth port."""
+        try:
+            self.port = await get_qsynth_port()
+            self.port_label_text.set('pmidi port: {}'.format(self.port))
+        except Exception as err:
+            ErrorDialog(
+                self.root,
+                data="Could not find midi port\n{}".format(str(err)))
+            raise
 
     def create_widgets(self):
         """Put some stuff up to look at."""
