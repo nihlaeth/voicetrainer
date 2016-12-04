@@ -4,7 +4,7 @@ MIDI voice exercises made convenient
 ## About
 I'm a singer and I have a disability that prevents me from using a keyboard (musical or otherwise). Since speech recognition and making music are a really bad combination, I could pretty much only do voice exercises during my singing lessons, which frustrated me to no end.
 
-So I started thinking about a solution. What I want from this is an exercise that I can easily change into a different tempo or key. It should be trivial to pause, repeat, or change the paramaters. Everything has to be operable by mouse alone. And it should be quality MIDI, because I can't stand the sinus tone that most MIDI sequencers emit. Also, I want sheet music. Beautiful sheet music, preferably with lots of notes (the textual kind). And it shouldn't be hard to add new exercises, or at least not a lot of dictation work.
+So I started thinking about a solution. What I want from this is an exercise that I can easily change into a different tempo or key. It should be trivial to pause, repeat, or change the parameters. Everything has to be operable by mouse alone. And it should be quality MIDI, because I can't stand the sinus tone that most MIDI sequencers emit. Also, I want sheet music. Beautiful sheet music, preferably with lots of notes (the textual kind). And it shouldn't be hard to add new exercises, or at least not a lot of dictation work.
 
 It says something about me that I'd rather dictate code one letter at a time for four days straight than click pause and play a few times in a big MIDI file, but here it is, so you won't have to repeat the feat. Enjoy, and feel free to make pull requests with your own exercises.
 
@@ -41,12 +41,17 @@ voicetrainer
 ```
 
 ## Todo
-* refactor MainWindow: put exercise stuff in mixin to prepare for songs
+* start port finding from main class
+* put state file in config dir, not in exercises
+* add interface class for songs
+* nest notebooks
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
 
 ## Planned features
-* add export pdf and lily option
+* select dynamics
 * add mode for playing MIDI backing tracks
 * allow selecting different midi synthesizers
+* user-specific settings and exercises
+* compile exercise before it's started
