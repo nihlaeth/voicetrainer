@@ -11,6 +11,8 @@ from pkg_resources import resource_filename, Requirement
 from voicetrainer.aiotk import (
     ErrorDialog,
     OkCancelDialog,
+    Dialog,
+    SaveFileDialog,
     LoadFileDialog)
 from voicetrainer.play import (
     get_qsynth_port,
@@ -26,7 +28,7 @@ class ExerciseMixin:
     """
     All the exercise stuff.
 
-    This is a mixig class. If you need a method from here, call it
+    This is a mixin class. If you need a method from here, call it
     specifically. To avoid naming collisions, start all properties
     with ex_. All properties that do not start with ex_, are assumed to be
     provided the class that this is mixed in.
@@ -180,6 +182,22 @@ class ExerciseMixin:
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.remove_exercise(self)))
         self.ex_menu.add_command(
+            label='Export midi',
+            command=lambda: asyncio.ensure_future(
+                ExerciseMixin.export(self, FileType.midi)))
+        self.ex_menu.add_command(
+            label='Export png',
+            command=lambda: asyncio.ensure_future(
+                ExerciseMixin.export(self, FileType.png)))
+        self.ex_menu.add_command(
+            label='Export pdf',
+            command=lambda: asyncio.ensure_future(
+                ExerciseMixin.export(self, FileType.pdf)))
+        self.ex_menu.add_command(
+            label='Export lilypond',
+            command=lambda: asyncio.ensure_future(
+                ExerciseMixin.export(self, FileType.lily)))
+        self.ex_menu.add_command(
             label='Clear cache',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.clear_cache(self)))
@@ -258,6 +276,62 @@ class ExerciseMixin:
         self.ex_image_cache = {}
         for i in range(len(self.ex_tabs)):
             await ExerciseMixin.update_sheet(self, tab_num=i)
+
+    async def export(self, file_type: FileType):
+        """Export compiled data."""
+        # get interface
+        tab_name = self.ex_notebook.tab(self.ex_num)['text']
+        pitch = self.ex_tabs[self.ex_num]['curr_pitch'].get()
+        bpm = int(self.ex_tabs[self.ex_num]['bpm'].get())
+        sound = self.ex_tabs[self.ex_num]['sound'].get()
+        exercise = Exercise(
+            self.ex_data_path,
+            tab_name,
+            pitch,
+            bpm,
+            sound)
+
+        # get save_path
+        file_name = exercise.get_filename(file_type)
+        save_dialog = SaveFileDialog(
+            self.root,
+            dir_or_file=Path('~'),
+            default=file_name.name)
+        save_path = await save_dialog.await_data()
+        if save_path is None:
+            return
+
+        # compile and save
+        if file_type == FileType.lily:
+            # we don't compile lily
+            save_path.write_text(exercise.get_final_lily_code(file_type))
+            Dialog(self.root, data="Export complete")
+            return
+        if not file_name.is_file():
+            try:
+                self.compiler_count += 1
+                self.update_compiler()
+                log = await compile_(exercise, file_type)
+                if len(log[0]) > 0:
+                    self.messages.append(log[0])
+                if len(log[1]) > 0:
+                    self.messages.append(log[1])
+                self.show_messages()
+            except Exception as err:
+                ErrorDialog(
+                    self.root,
+                    data="Could not compile exercise\n{}".format(str(err)))
+                raise
+            finally:
+                self.compiler_count -= 1
+                self.update_compiler()
+        if not file_name.is_file():
+            ErrorDialog(
+                self.root,
+                data="Could not compile {}".format(str(file_name)))
+            return
+        save_path.write_bytes(file_name.read_bytes())
+        Dialog(self.root, data="Export complete")
 
     async def add_exercise(self):
         """Add new exercise."""
