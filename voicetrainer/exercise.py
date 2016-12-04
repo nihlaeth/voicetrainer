@@ -10,8 +10,8 @@ from pkg_resources import resource_filename, Requirement
 
 from voicetrainer.aiotk import (
     ErrorDialog,
+    InfoDialog,
     OkCancelDialog,
-    Dialog,
     SaveFileDialog,
     LoadFileDialog)
 from voicetrainer.play import (
@@ -310,12 +310,12 @@ class ExerciseMixin:
         if file_type == FileType.lily:
             # we don't compile lily
             save_path.write_text(exercise.get_final_lily_code(file_type))
-            Dialog(self.root, data="Export complete")
+            InfoDialog(self.root, data="Export complete")
             return
-        self.get_file(exercise, file_type)
+        await self.get_file(exercise, file_type)
 
         save_path.write_bytes(file_name.read_bytes())
-        Dialog(self.root, data="Export complete")
+        InfoDialog(self.root, data="Export complete")
 
     async def add_exercise(self):
         """Add new exercise."""

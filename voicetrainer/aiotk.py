@@ -111,6 +111,20 @@ class OkCancelDialog(Dialog):
         self.return_data = False
         self.return_event.set()
 
+class InfoDialog(Dialog):
+
+    """Display info."""
+
+    def create_widgets(self):
+        """Show info."""
+        self.top.title("Info")
+
+        self.label = ttk.Label(self.frame, text=self.data)
+        self.label.grid(row=0, column=0)
+        self.button = ttk.Button(
+            self.frame, text="OK", command=self.close)
+        self.button.grid(row=1, column=0)
+
 class ErrorDialog(Dialog):
 
     """Display error."""
