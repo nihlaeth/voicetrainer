@@ -45,9 +45,11 @@ voicetrainer
 * put state file in config dir, not in exercises
 * add interface class for songs
 * nest notebooks
+* tweak pmidi settings (shorter sleep after midi end)
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
+* export dialog does not display data
 
 ## Planned features
 * select dynamics
