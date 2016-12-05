@@ -385,9 +385,9 @@ class ExerciseMixin:
 
         # remove files
         for file_ in chain(
-                self.data_path.glob("*.midi"),
-                self.data_path.glob("*.png"),
-                self.data_path.glob("*.pdf")):
+                self.ex_data_path.glob("*.midi"),
+                self.ex_data_path.glob("*.png"),
+                self.ex_data_path.glob("*.pdf")):
             file_.unlink()
 
         # clear image_cache and display new sheets
