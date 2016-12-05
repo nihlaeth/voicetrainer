@@ -41,19 +41,20 @@ class Interface:
         self.page = page
         self.start_measure = start_measure
 
-    def get_filename(self, file_type: FileType, no_page: bool=False):
+    def get_filename(self, file_type: FileType, compiling: bool=False):
         """Return full path."""
         if file_type == FileType.lily:
             return self.data_path.joinpath("{}.ly".format(self.name))
         if file_type == FileType.midi:
             measure = "-from-measure-{}".format(
-                self.start_measure) if self.has_start_measure else ""
+                self.start_measure if not compiling else 1) if \
+                    self.has_start_measure else ""
             return self.data_path.joinpath("{}-{}bpm-{}{}.midi".format(
                 self.name, self.bpm, self.pitch, measure))
         if file_type == FileType.png:
             sound = "-{}".format(self.sound) if self.has_sound else ""
             page = "-{}".format(
-                self.page) if self.has_pages and not no_page else ""
+                self.page) if self.has_pages and not compiling else ""
             return self.data_path.joinpath("{}-{}{}{}.png".format(
                 self.name, self.pitch, sound, page))
         if file_type == FileType.pdf:
@@ -64,7 +65,7 @@ class Interface:
     def get_lilypond_options(self, file_type: FileType) -> List[str]:
         """Return list of lilypond cli options to compile file_type."""
         partial_name = self.data_path.joinpath(
-            self.get_filename(file_type, no_page=True).stem)
+            self.get_filename(file_type, compiling=True).stem)
         options = [
             "lilypond",
             "--loglevel=WARN",
