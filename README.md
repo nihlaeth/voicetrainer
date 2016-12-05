@@ -48,8 +48,6 @@ voicetrainer
 * add measure selector to songs tab
 * fetch natural tempo and key from lily code
 * move song controls to logical place
-* move get_single_sheet and everything cache related to MainWindow
-* have ExerciseMixin use PIL and image resizing
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing

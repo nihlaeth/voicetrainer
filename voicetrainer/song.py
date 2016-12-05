@@ -8,8 +8,6 @@ from functools import partial
 from collections import namedtuple
 from pkg_resources import resource_filename, Requirement
 
-from PIL import Image, ImageTk
-
 from voicetrainer.aiotk import (
     ErrorDialog,
     InfoDialog,
@@ -41,7 +39,6 @@ class SongMixin:
             [',', '', '\''],
             list("cdefgab"))]
         self.so_tabs = []
-        self.so_image_cache = {}
 
         SongMixin.create_widgets(self)
 
@@ -308,8 +305,7 @@ class SongMixin:
 
     async def resize_sheet(self, event, tab_num):
         """Resize sheets to screen size."""
-        left = await SongMixin.get_single_sheet(
-            self,
+        left = await self.get_single_sheet(
             SongMixin.get_so_interface(self, tab_num),
             event.width/2,
             event.height)
@@ -317,32 +313,9 @@ class SongMixin:
         self.so_tabs[tab_num]['sheet'].create_image(
             0,
             0,
-            image=self.so_image_cache[left]['image'],
+            image=self.image_cache[left]['image'],
             anchor=tk.NW,
             tags="left")
-
-    async def get_single_sheet(
-            self,
-            song: Song,
-            max_width: int,
-            max_height: int):
-        """Fetch and size sheet while preserving ratio."""
-        png = await self.get_file(song)
-        if png not in self.so_image_cache:
-            self.so_image_cache[png] = {}
-            self.so_image_cache[png]['original'] = Image.open(str(png))
-        original = self.so_image_cache[png]['original']
-        width_ratio = float(original.width) / float(max_width)
-        height_ratio = float(original.height) / float(max_height)
-        ratio = max([width_ratio, height_ratio])
-        size = (int(original.width / ratio), int(original.height / ratio))
-        if size[0] == 0 or size[1] == 0:
-            size = (1, 1)
-        self.so_image_cache[png]['resized'] = \
-            self.so_image_cache[png]['original'].resize(size, Image.ANTIALIAS)
-        self.so_image_cache[png]['image'] = ImageTk.PhotoImage(
-            self.so_image_cache[png]['resized'])
-        return png
 
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""

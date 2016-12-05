@@ -6,6 +6,8 @@ from pathlib import Path
 import json
 from pkg_resources import resource_filename, Requirement, cleanup_resources
 
+from PIL import Image, ImageTk
+
 from voicetrainer.aiotk import (
     Root,
     OkCancelDialog,
@@ -20,7 +22,7 @@ from voicetrainer.compile_interface import FileType, Interface
 # pylint: disable=too-many-instance-attributes,too-many-locals
 # pylint: disable=too-many-statements, too-many-public-methods, no-member
 # It's messy, but there simply too many references to keep alive.
-# pylint: disable=broad-except
+# pylint: disable=broad-except,bad-continuation
 # because of asyncio exceptions are only displayed at exit, we
 # want to give the user immediate feedback.
 
@@ -53,6 +55,7 @@ class MainWindow(ExerciseMixin, SongMixin):
         self.repeat_once = False
 
         # gui elements storage
+        self.image_cache = {}
         self.create_widgets()
 
         ExerciseMixin.__init__(self)
@@ -91,6 +94,10 @@ class MainWindow(ExerciseMixin, SongMixin):
         self.file_menu.add_command(
             label='Save state',
             command=self.save_state)
+        self.file_menu.add_command(
+            label='Clear cache',
+            command=lambda: asyncio.ensure_future(
+                self.clear_cache()))
         self.file_menu.add_command(
             label='Quit',
             command=lambda: asyncio.ensure_future(self.quit()))
@@ -239,6 +246,42 @@ class MainWindow(ExerciseMixin, SongMixin):
                 self.root,
                 data="Could not compile {}".format(str(file_name)))
         return file_name
+
+    async def get_single_sheet(
+            self,
+            interface: Interface,
+            max_width: int,
+            max_height: int):
+        """Fetch and size sheet while preserving ratio."""
+        png = await self.get_file(interface)
+        if png not in self.image_cache:
+            self.image_cache[png] = {}
+            self.image_cache[png]['original'] = Image.open(str(png))
+        original = self.image_cache[png]['original']
+        width_ratio = float(original.width) / float(max_width)
+        height_ratio = float(original.height) / float(max_height)
+        ratio = max([width_ratio, height_ratio])
+        size = (int(original.width / ratio), int(original.height / ratio))
+        if size[0] == 0 or size[1] == 0:
+            size = (1, 1)
+        self.image_cache[png]['resized'] = \
+            self.image_cache[png]['original'].resize(size, Image.ANTIALIAS)
+        self.image_cache[png]['image'] = ImageTk.PhotoImage(
+            self.image_cache[png]['resized'])
+        return png
+
+    async def clear_cache(self):
+        """Remove all compiled files."""
+        # confirm
+        confirm_remove = OkCancelDialog(
+            self.root,
+            "This will remove all compiled files. Are you sure?")
+        if not await confirm_remove.await_data():
+            return
+
+        self.image_cache = {}
+        ExerciseMixin.clear_cache(self)
+        SongMixin.clear_cache(self)
 
     async def stop(self):
         """Stop midi regardless of state."""

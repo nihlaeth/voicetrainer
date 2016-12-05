@@ -5,6 +5,7 @@ import asyncio
 from pathlib import Path
 from itertools import product, chain
 from functools import partial
+from collections import namedtuple
 from random import choice
 from pkg_resources import resource_filename, Requirement
 
@@ -42,7 +43,6 @@ class ExerciseMixin:
             list("cdefgab"))]
         self.ex_sound_list = ["Mi", "Na", "Noe", "Nu", "No"]
         self.ex_tabs = []
-        self.ex_image_cache = {}
 
         ExerciseMixin.create_widgets(self)
 
@@ -162,9 +162,13 @@ class ExerciseMixin:
         play.grid(column=6, row=0, sticky=tk.W+tk.N)
 
         # sheet display
-        sheet = ttk.Label(tab)
+        sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
+        sheet.bind(
+            "<Configure>",
+            lambda e, num=tab_num: asyncio.ensure_future(
+                ExerciseMixin.resize_sheet(self, e, num)))
         self.ex_tabs[tab_num]['sheet'] = sheet
-        sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W)
+        sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W+tk.S+tk.E)
         asyncio.ensure_future(
             ExerciseMixin.update_sheet(self, tab_num=tab_num))
 
@@ -196,10 +200,6 @@ class ExerciseMixin:
             label='Export lilypond',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.export(self, FileType.lily)))
-        self.ex_menu.add_command(
-            label='Clear cache',
-            command=lambda: asyncio.ensure_future(
-                ExerciseMixin.clear_cache(self)))
         self.ex_menu.add_command(
             label='Precompile',
             command=lambda: asyncio.ensure_future(
@@ -267,7 +267,7 @@ class ExerciseMixin:
         self.compiler_count -= 1
         self.update_compiler()
         self.show_messages()
-        self.ex_image_cache = {}
+        self.image_cache = {}
         for i in range(len(self.ex_tabs)):
             await self.ex_update_sheet(tab_num=i)
 
@@ -279,7 +279,7 @@ class ExerciseMixin:
             file_.unlink()
 
         # clear image_cache and display new sheets
-        self.ex_image_cache = {}
+        self.image_cache = {}
         for i in range(len(self.ex_tabs)):
             await ExerciseMixin.update_sheet(self, tab_num=i)
 
@@ -376,13 +376,6 @@ class ExerciseMixin:
 
     async def clear_cache(self):
         """Remove all compiled files."""
-        # confirm
-        confirm_remove = OkCancelDialog(
-            self.root,
-            "This will remove all compiled files. Are you sure?")
-        if not await confirm_remove.await_data():
-            return
-
         # remove files
         for file_ in chain(
                 self.ex_data_path.glob("*.midi"),
@@ -391,7 +384,6 @@ class ExerciseMixin:
             file_.unlink()
 
         # clear image_cache and display new sheets
-        self.ex_image_cache = {}
         for i in range(len(self.ex_tabs)):
             await ExerciseMixin.update_sheet(self, tab_num=i)
 
@@ -399,10 +391,25 @@ class ExerciseMixin:
         """Display relevant sheet."""
         if tab_num is None:
             tab_num = self.ex_num
-        png = await self.get_file(ExerciseMixin.get_ex_interface(self, tab_num))
-        if png not in self.ex_image_cache:
-            self.ex_image_cache[png] = tk.PhotoImage(file=png)
-        self.ex_tabs[tab_num]['sheet'].config(image=self.ex_image_cache[png])
+        Size = namedtuple('Size', ['width', 'height'])
+        size = Size(
+            self.ex_tabs[tab_num]['sheet'].winfo_width(),
+            self.ex_tabs[tab_num]['sheet'].winfo_height())
+        await ExerciseMixin.resize_sheet(self, size, tab_num)
+
+    async def resize_sheet(self, event, tab_num):
+        """Resize sheets to screen size."""
+        left = await self.get_single_sheet(
+            ExerciseMixin.get_ex_interface(self, tab_num),
+            event.width,
+            event.height)
+        self.ex_tabs[tab_num]['sheet'].delete("left")
+        self.ex_tabs[tab_num]['sheet'].create_image(
+            0,
+            0,
+            image=self.image_cache[left]['image'],
+            anchor=tk.NW,
+            tags="left")
 
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""
