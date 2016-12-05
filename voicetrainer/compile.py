@@ -1,22 +1,22 @@
-"""Compile lily exercise into png and midi."""
+"""Compile lily code into png and midi."""
 from typing import List, Tuple
 from pathlib import Path
 from itertools import product
 from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
 
-from voicetrainer.compile_interface import FileType, Exercise
+from voicetrainer.compile_interface import FileType, Interface, Exercise
 
 # pylint: disable=invalid-name,bad-continuation
-async def compile_(exercise: Exercise, file_type: FileType) -> Tuple[str, str]:
-    """Open exercise file, format, and compile with lilypond."""
+async def compile_(interface: Interface, file_type: FileType) -> Tuple[str, str]:
+    """Open interface file, format, and compile with lilypond."""
     proc = await create_subprocess_exec(
-        *exercise.get_lilypond_options(file_type),
+        *interface.get_lilypond_options(file_type),
         stdin=PIPE,
         stdout=PIPE,
         stderr=PIPE)
     outs, errs = await proc.communicate(str.encode(
-        exercise.get_final_lily_code(file_type)))
+        interface.get_final_lily_code(file_type)))
     return (bytes.decode(outs), bytes.decode(errs))
 
 async  def compile_all(path: Path, include_path: Path) -> List[Tuple[str, str]]:
