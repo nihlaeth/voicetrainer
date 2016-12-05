@@ -64,7 +64,7 @@ class Interface:
     def get_lilypond_options(self, file_type: FileType) -> List[str]:
         """Return list of lilypond cli options to compile file_type."""
         partial_name = self.data_path.joinpath(
-            self.get_filename(file_type).stem)
+            self.get_filename(file_type, no_page=True).stem)
         options = [
             "lilypond",
             "--loglevel=WARN",
