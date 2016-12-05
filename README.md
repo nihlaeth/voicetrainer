@@ -22,7 +22,9 @@ Then there's the sheeton, sheetoff, midion and midioff variables which are used 
 These parameters are not optional, though you might ignore a few by placing them in a comment.
 
 ## Dependencies
-* python3.5 (no third party modules required)
+* python3.5
+* music21
+* pillow
 * tk/tcl 8.6
 * lilypond (I used the dev version)
 * pmidi
@@ -42,6 +44,11 @@ voicetrainer
 ## Todo
 * put state file in config dir, not in exercises
 * tweak pmidi settings (shorter sleep after midi end)
+* scale song sheet
+* deal with multi-page song sheets
+* add measure selector to songs tab
+* fetch natural tempo and key from lily code
+* move song controls to logical place
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
@@ -49,7 +56,6 @@ voicetrainer
 
 ## Planned features
 * select dynamics
-* add mode for playing MIDI backing tracks
 * allow selecting different midi synthesizers
 * user-specific settings and exercises
 * compile exercise before it's started

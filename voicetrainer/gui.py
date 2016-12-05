@@ -13,6 +13,7 @@ from voicetrainer.aiotk import (
     Messages)
 from voicetrainer.play import stop_midi, get_qsynth_port
 from voicetrainer.exercise import ExerciseMixin
+from voicetrainer.song import SongMixin
 from voicetrainer.compile import compile_
 from voicetrainer.compile_interface import FileType, Interface
 
@@ -23,7 +24,7 @@ from voicetrainer.compile_interface import FileType, Interface
 # because of asyncio exceptions are only displayed at exit, we
 # want to give the user immediate feedback.
 
-class MainWindow(ExerciseMixin):
+class MainWindow(ExerciseMixin, SongMixin):
 
     """Voicetrainer application."""
 
@@ -55,6 +56,7 @@ class MainWindow(ExerciseMixin):
         self.create_widgets()
 
         ExerciseMixin.__init__(self)
+        SongMixin.__init__(self)
 
         self.restore_state()
 
@@ -163,6 +165,7 @@ class MainWindow(ExerciseMixin):
         """Save settings to json file."""
         data = {}
         data['exercises'] = ExerciseMixin.save_state(self)
+        data['songs'] = SongMixin.save_state(self)
         self.data_path.joinpath('state.json').write_text(
             json.dumps(data))
 
@@ -174,6 +177,8 @@ class MainWindow(ExerciseMixin):
         data = json.loads(state_file.read_text())
         if 'exercises' in data:
             ExerciseMixin.restore_state(self, data['exercises'])
+        if 'songs' in data:
+            SongMixin.restore_state(self, data['songs'])
 
     def show_messages(self):
         """Show if there unread messages."""

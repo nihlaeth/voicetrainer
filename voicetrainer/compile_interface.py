@@ -54,7 +54,8 @@ class Interface:
         if file_type == FileType.png:
             sound = "-{}".format(self.sound) if self.has_sound else ""
             page = "-{}".format(
-                self.page) if self.has_pages and not compiling else ""
+                self.page) if self.has_pages and self.page > 1 and \
+                    not compiling else ""
             return self.data_path.joinpath("{}-{}{}{}.png".format(
                 self.name, self.pitch, sound, page))
         if file_type == FileType.pdf:
