@@ -139,10 +139,6 @@ class SongMixin:
             label='Export lilypond',
             command=lambda: asyncio.ensure_future(
                 SongMixin.export(self, FileType.lily)))
-        self.so_menu.add_command(
-            label='Clear cache',
-            command=lambda: asyncio.ensure_future(
-                SongMixin.clear_cache(self)))
 
         self.so_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.so_frame, text='Songs')
@@ -274,13 +270,6 @@ class SongMixin:
 
     async def clear_cache(self):
         """Remove all compiled files."""
-        # confirm
-        confirm_remove = OkCancelDialog(
-            self.root,
-            "This will remove all compiled files. Are you sure?")
-        if not await confirm_remove.await_data():
-            return
-
         # remove files
         for file_ in chain(
                 self.so_data_path.glob("*.midi"),
@@ -288,8 +277,7 @@ class SongMixin:
                 self.so_data_path.glob("*.pdf")):
             file_.unlink()
 
-        # clear image_cache and display new sheets
-        self.so_image_cache = {}
+        # display fresh sheets
         for i in range(len(self.so_tabs)):
             await SongMixin.update_sheet(self, tab_num=i)
 
