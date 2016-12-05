@@ -403,6 +403,7 @@ class SaveFileDialog(FileDialog):
             if file_.is_dir():
                 self.root.bell()
                 return
+            self.top.grab_release()
             confirm_dialog = OkCancelDialog(
                 self.root,
                 data="Overwrite existing file {}?".format(file_))
