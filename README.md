@@ -44,6 +44,7 @@ voicetrainer
 * add interface class for songs
 * nest notebooks
 * tweak pmidi settings (shorter sleep after midi end)
+* write midi clip extractor using music21
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
