@@ -250,7 +250,7 @@ class ExerciseMixin:
         """Recompile all exercises."""
         self.compiler_count += 1
         self.update_compiler()
-        log = await compile_all(self.ex_data_path)
+        log = await compile_all(self.ex_data_path, self.include_path)
         for output, err in [
                 log_tuple for log_item in log for log_tuple in log_item]:
             if len(output) > 0:

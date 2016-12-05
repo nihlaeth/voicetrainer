@@ -20,7 +20,7 @@ async def compile_(exercise: Exercise, file_type: FileType) -> Tuple[str, str]:
         exercise.get_final_lily_code(file_type)))
     return (bytes.decode(outs), bytes.decode(errs))
 
-async  def compile_all(path: Path) -> List[Tuple[str, str]]:
+async  def compile_all(path: Path, include_path: Path) -> List[Tuple[str, str]]:
     """Compile all exercises."""
     if not path.is_dir():
         raise Exception('{} is not a directory'.format(path))
@@ -35,21 +35,10 @@ async  def compile_all(path: Path) -> List[Tuple[str, str]]:
         for combo in variables:
             exercise = Exercise(
                 path,
+                include_path,
                 file_name.stem,
                 combo[1],
                 combo[2],
                 combo[3])
             log.append(await compile_(exercise, combo[0]))
     return log
-
-if __name__ == "__main__":
-    loop = get_event_loop()
-    data_path = Path(resource_filename(
-        Requirement.parse("voicetrainer"),
-        'voicetrainer/exercises'))
-    try:
-        result = loop.run_until_complete(compile_all(data_path))
-    finally:
-        cleanup_resources()
-        loop.close()
-        print(result)
