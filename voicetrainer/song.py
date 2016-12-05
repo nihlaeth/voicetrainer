@@ -5,7 +5,10 @@ import asyncio
 from pathlib import Path
 from itertools import product, chain
 from functools import partial
+from collections import namedtuple
 from pkg_resources import resource_filename, Requirement
+
+from PIL import Image, ImageTk
 
 from voicetrainer.aiotk import (
     ErrorDialog,
@@ -101,9 +104,13 @@ class SongMixin:
         play.grid(column=6, row=0, sticky=tk.W+tk.N)
 
         # sheet display
-        sheet = ttk.Label(tab)
+        sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
+        sheet.bind(
+            "<Configure>",
+            lambda e, num=tab_num: asyncio.ensure_future(
+                SongMixin.resize_sheet(self, e, num)))
         self.so_tabs[tab_num]['sheet'] = sheet
-        sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W)
+        sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W+tk.S+tk.E)
         asyncio.ensure_future(
             SongMixin.update_sheet(self, tab_num=tab_num))
 
@@ -293,10 +300,49 @@ class SongMixin:
         """Display relevant sheet."""
         if tab_num is None:
             tab_num = self.so_num
-        png = await self.get_file(SongMixin.get_so_interface(self, tab_num))
+        Size = namedtuple('Size', ['width', 'height'])
+        size = Size(
+            self.so_tabs[tab_num]['sheet'].winfo_width(),
+            self.so_tabs[tab_num]['sheet'].winfo_height())
+        await SongMixin.resize_sheet(self, size, tab_num)
+
+    async def resize_sheet(self, event, tab_num):
+        """Resize sheets to screen size."""
+        left = await SongMixin.get_single_sheet(
+            self,
+            SongMixin.get_so_interface(self, tab_num),
+            event.width/2,
+            event.height)
+        self.so_tabs[tab_num]['sheet'].delete("left")
+        self.so_tabs[tab_num]['sheet'].create_image(
+            0,
+            0,
+            image=self.so_image_cache[left]['image'],
+            anchor=tk.NW,
+            tags="left")
+
+    async def get_single_sheet(
+            self,
+            song: Song,
+            max_width: int,
+            max_height: int):
+        """Fetch and size sheet while preserving ratio."""
+        png = await self.get_file(song)
         if png not in self.so_image_cache:
-            self.so_image_cache[png] = tk.PhotoImage(file=png)
-        self.so_tabs[tab_num]['sheet'].config(image=self.so_image_cache[png])
+            self.so_image_cache[png] = {}
+            self.so_image_cache[png]['original'] = Image.open(str(png))
+        original = self.so_image_cache[png]['original']
+        width_ratio = float(original.width) / float(max_width)
+        height_ratio = float(original.height) / float(max_height)
+        ratio = max([width_ratio, height_ratio])
+        size = (int(original.width / ratio), int(original.height / ratio))
+        if size[0] == 0 or size[1] == 0:
+            size = (1, 1)
+        self.so_image_cache[png]['resized'] = \
+            self.so_image_cache[png]['original'].resize(size, Image.ANTIALIAS)
+        self.so_image_cache[png]['image'] = ImageTk.PhotoImage(
+            self.so_image_cache[png]['resized'])
+        return png
 
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""
