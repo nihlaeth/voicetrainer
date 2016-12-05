@@ -49,7 +49,7 @@ voicetrainer
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
-* export dialog does not display data
+* confirm overwrite dialog is unresponsive while file dialog is open
 
 ## Planned features
 * select dynamics
