@@ -14,7 +14,7 @@ from voicetrainer.aiotk import (
 from voicetrainer.play import stop_midi, get_qsynth_port
 from voicetrainer.exercise import ExerciseMixin
 from voicetrainer.compile import compile_
-from voicetrainer.compile_interface import FileType, Exercise
+from voicetrainer.compile_interface import FileType, Interface
 
 # pylint: disable=too-many-instance-attributes,too-many-locals
 # pylint: disable=too-many-statements, too-many-public-methods, no-member
@@ -202,7 +202,7 @@ class MainWindow(ExerciseMixin):
 
     async def get_file(
             self,
-            interface: Exercise,
+            interface: Interface,
             file_type: FileType=FileType.png) -> str:
         """Assemble file_name, compile if non-existent."""
         file_name = interface.get_filename(file_type)

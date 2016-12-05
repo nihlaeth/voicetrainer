@@ -287,10 +287,10 @@ class ExerciseMixin:
         return Exercise(
             self.ex_data_path,
             self.include_path,
-            tab_name,
-            pitch,
-            bpm,
-            sound)
+            name=tab_name,
+            pitch=pitch,
+            bpm=bpm,
+            sound=sound)
 
     async def export(self, file_type: FileType):
         """Export compiled data."""

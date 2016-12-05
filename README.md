@@ -41,7 +41,6 @@ voicetrainer
 
 ## Todo
 * put state file in config dir, not in exercises
-* add interface class for songs
 * nest notebooks
 * tweak pmidi settings (shorter sleep after midi end)
 * write midi clip extractor using music21

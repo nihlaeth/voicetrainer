@@ -12,9 +12,14 @@ class FileType(Enum):
     png = 3
     pdf = 4
 
-class Exercise:
+# pylint: disable=too-many-instance-attributes
+class Interface:
 
     """Filenames and compile flags for exercises."""
+
+    has_pages = False
+    has_sound = False
+    has_start_measure = False
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -24,27 +29,37 @@ class Exercise:
             name: str,
             pitch: str='c',
             bpm: int=140,
-            sound: str='Mi') -> None:
+            sound: str='Mi',
+            page: int=1,
+            start_measure: int=1) -> None:
         self.data_path = data_path
         self.include_path = include_path
         self.name = name
         self.pitch = pitch
         self.bpm = bpm
         self.sound = sound
+        self.page = page
+        self.start_measure = start_measure
 
-    def get_filename(self, file_type: FileType):
+    def get_filename(self, file_type: FileType, no_page: bool=False):
         """Return full path."""
         if file_type == FileType.lily:
             return self.data_path.joinpath("{}.ly".format(self.name))
         if file_type == FileType.midi:
-            return self.data_path.joinpath("{}-{}bpm-{}.midi".format(
-                self.name, self.bpm, self.pitch))
+            measure = "-from-measure-{}".format(
+                self.start_measure) if self.has_start_measure else ""
+            return self.data_path.joinpath("{}-{}bpm-{}{}.midi".format(
+                self.name, self.bpm, self.pitch, measure))
         if file_type == FileType.png:
-            return self.data_path.joinpath("{}-{}-{}.png".format(
-                self.name, self.pitch, self.sound))
+            sound = "-{}".format(self.sound) if self.has_sound else ""
+            page = "-{}".format(
+                self.page) if self.has_pages and not no_page else ""
+            return self.data_path.joinpath("{}-{}{}{}.png".format(
+                self.name, self.pitch, sound, page))
         if file_type == FileType.pdf:
-            return self.data_path.joinpath("{}-{}-{}.pdf".format(
-                self.name, self.pitch, self.sound))
+            sound = "-{}".format(self.sound) if self.has_sound else ""
+            return self.data_path.joinpath("{}-{}{}.pdf".format(
+                self.name, self.pitch, sound))
 
     def get_lilypond_options(self, file_type: FileType) -> List[str]:
         """Return list of lilypond cli options to compile file_type."""
@@ -93,3 +108,19 @@ class Exercise:
             pitch=self.pitch,
             pitch_noheight=self.pitch[0],
             sound=self.sound)
+
+class Exercise(Interface):
+
+    """Exercise interface."""
+
+    has_pages = False
+    has_sound = True
+    has_start_measure = False
+
+class Song(Interface):
+
+    """Song interface."""
+
+    has_pages = True
+    has_sound = False
+    has_start_measure = True

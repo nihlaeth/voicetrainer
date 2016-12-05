@@ -2,9 +2,8 @@
 from typing import List, Tuple
 from pathlib import Path
 from itertools import product
-from asyncio import create_subprocess_exec, get_event_loop
+from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
-from pkg_resources import resource_filename, Requirement, cleanup_resources
 
 from voicetrainer.compile_interface import FileType, Exercise
 
@@ -36,9 +35,9 @@ async  def compile_all(path: Path, include_path: Path) -> List[Tuple[str, str]]:
             exercise = Exercise(
                 path,
                 include_path,
-                file_name.stem,
-                combo[1],
-                combo[2],
-                combo[3])
+                name=file_name.stem,
+                pitch=combo[1],
+                bpm=combo[2],
+                sound=combo[3])
             log.append(await compile_(exercise, combo[0]))
     return log
