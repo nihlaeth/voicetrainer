@@ -99,15 +99,25 @@ class Interface:
             midioff = "%}"
             sheeton = ""
             sheetoff = ""
-        return lily_code.safe_substitute(
-            midion=midion,
-            midioff=midioff,
-            sheeton=sheeton,
-            sheetoff=sheetoff,
-            tempo=self.bpm,
-            pitch=self.pitch,
-            pitch_noheight=self.pitch[0],
-            sound=self.sound)
+        if self.has_sound:
+            return lily_code.safe_substitute(
+                midion=midion,
+                midioff=midioff,
+                sheeton=sheeton,
+                sheetoff=sheetoff,
+                tempo=self.bpm,
+                pitch=self.pitch,
+                pitch_noheight=self.pitch[0],
+                sound=self.sound)
+        else:
+            return lily_code.safe_substitute(
+                midion=midion,
+                midioff=midioff,
+                sheeton=sheeton,
+                sheetoff=sheetoff,
+                tempo=self.bpm,
+                pitch=self.pitch,
+                pitch_noheight=self.pitch[0])
 
 class Exercise(Interface):
 
