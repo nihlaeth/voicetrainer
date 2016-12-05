@@ -205,11 +205,18 @@ class ExerciseMixin:
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.recompile(self)))
 
-        self.ex_notebook = ttk.Notebook(self.window)
+        self.ex_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.ex_frame, text='Exercises')
+        self.ex_frame.rowconfigure(0, weight=1)
+        self.ex_frame.columnconfigure(0, weight=1)
+
+        self.ex_notebook = ttk.Notebook(self.ex_frame)
         for exercise in self.ex_data_path.glob('*.ly'):
             ExerciseMixin.create_tab(self, exercise.stem)
         self.ex_notebook.grid(
-            column=0, row=0, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
+            column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.ex_notebook.rowconfigure(0, weight=1)
+        self.ex_notebook.columnconfigure(0, weight=1)
 
     @property
     def ex_num(self):

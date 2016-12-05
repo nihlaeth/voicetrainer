@@ -93,6 +93,11 @@ class MainWindow(ExerciseMixin):
             label='Quit',
             command=lambda: asyncio.ensure_future(self.quit()))
 
+        self.notebook = ttk.Notebook(self.window)
+        self.notebook.grid(
+            column=0, row=0, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.notebook.rowconfigure(0, weight=1)
+        self.notebook.columnconfigure(0, weight=1)
         self.separators = []
 
         self.statusbar = ttk.Frame(self.window)
