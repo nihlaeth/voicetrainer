@@ -286,6 +286,7 @@ class ExerciseMixin:
         sound = self.ex_tabs[tab_num]['sound'].get()
         return Exercise(
             self.ex_data_path,
+            self.include_path,
             tab_name,
             pitch,
             bpm,

@@ -27,7 +27,6 @@ These parameters are not optional, though you might ignore a few by placing them
 * lilypond (I used the dev version)
 * pmidi
 * fluidsynth (qsynth recommended)
-* color-pitch.ly (https://github.com/nihlaeth/sheetmusic/blob/master/color-pitch.ly)
 
 ## Installation
 ```
@@ -45,7 +44,6 @@ voicetrainer
 * add interface class for songs
 * nest notebooks
 * tweak pmidi settings (shorter sleep after midi end)
-* put color-pitch.ly in include directory
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing

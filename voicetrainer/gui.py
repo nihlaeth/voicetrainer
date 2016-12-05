@@ -31,6 +31,9 @@ class MainWindow(ExerciseMixin):
         self.data_path = Path(resource_filename(
             Requirement.parse("voicetrainer"),
             'voicetrainer/exercises'))
+        self.include_path = Path(resource_filename(
+            Requirement.parse("voicetrainer"),
+            'voicetrainer/include'))
         self.root = root
 
         # compiler state

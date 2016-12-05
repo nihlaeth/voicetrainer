@@ -20,11 +20,13 @@ class Exercise:
     def __init__(
             self,
             data_path: Path,
+            include_path: Path,
             name: str,
             pitch: str='c',
             bpm: int=140,
             sound: str='Mi') -> None:
         self.data_path = data_path
+        self.include_path = include_path
         self.name = name
         self.pitch = pitch
         self.bpm = bpm
@@ -51,6 +53,7 @@ class Exercise:
         options = [
             "lilypond",
             "--loglevel=WARN",
+            "--include={}".format(self.include_path),
             "--output={}".format(partial_name)]
         if file_type == FileType.lily:
             return
