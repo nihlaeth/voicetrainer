@@ -45,35 +45,37 @@ class SongMixin:
     def create_tab(self, song: str) -> None:
         """Populate song tab."""
         tab = ttk.Frame(self.so_notebook)
-        tab.rowconfigure(1, weight=1)
-        tab.columnconfigure(3, weight=1)
+        tab.rowconfigure(0, weight=1)
+        tab.columnconfigure(1, weight=1)
         self.so_notebook.add(tab, text=song)
         self.so_tabs.append({})
         tab_num = len(self.so_tabs) - 1
         self.so_tabs[tab_num]['tab'] = tab
 
-        # bpm selector
-        bpm_label = ttk.Label(tab, text="bpm:")
-        self.so_tabs[tab_num]['bpm_label'] = bpm_label
-        bpm_label.grid(column=2, row=0, sticky=tk.N+tk.W)
-        bpm = tk.Scale(
-            tab,
-            from_=80,
-            to=160,
-            tickinterval=10,
-            showvalue=0,
-            length=300,
-            resolution=10,
-            orient=tk.HORIZONTAL)
-        self.so_tabs[tab_num]['bpm'] = bpm
-        bpm.grid(column=3, row=0, sticky=tk.W+tk.N)
-
         # controls
         frame = ttk.Frame(tab)
         self.so_tabs[tab_num]['control_frame'] = frame
-        frame.grid(column=2, row=2, columnspan=2, sticky=tk.W+tk.N)
-        # sound pitch random autonext repeat_once next play/stop
+        frame.grid(column=0, row=0, sticky=tk.W+tk.N)
 
+        # bpm selector
+        bpm_label = ttk.Label(frame, text="bpm:")
+        self.so_tabs[tab_num]['bpm_label'] = bpm_label
+        bpm_label.grid(column=0, row=0, sticky=tk.N+tk.E)
+        bpm = tk.Scale(
+            frame,
+            from_=60,
+            to=240,
+            tickinterval=20,
+            showvalue=1,
+            length=300,
+            resolution=1,
+            orient=tk.VERTICAL)
+        self.so_tabs[tab_num]['bpm'] = bpm
+        bpm.grid(column=1, row=0, sticky=tk.W+tk.N)
+
+        key_label = ttk.Label(frame, text="key:")
+        self.so_tabs[tab_num]['key_label'] = key_label
+        key_label.grid(column=0, row=1, sticky=tk.N+tk.E)
         textvar = tk.StringVar()
         self.so_tabs[tab_num]['curr_pitch'] = textvar
         curr_pitch = tk.OptionMenu(
@@ -83,7 +85,7 @@ class SongMixin:
             command=lambda _: asyncio.ensure_future(
                 SongMixin.on_pitch_change(self)))
         self.so_tabs[tab_num]['pitch_menu'] = curr_pitch
-        curr_pitch.grid(column=1, row=0, sticky=tk.W+tk.N)
+        curr_pitch.grid(column=1, row=1, sticky=tk.W+tk.N)
 
         play_stop = tk.StringVar()
         play_stop.set("play")
@@ -94,7 +96,7 @@ class SongMixin:
             command=lambda: asyncio.ensure_future(
                 SongMixin.play_or_stop(self)))
         self.so_tabs[tab_num]['play'] = play
-        play.grid(column=6, row=0, sticky=tk.W+tk.N)
+        play.grid(column=0, row=2, columnspan=2, sticky=tk.W+tk.N)
 
         # sheet display
         sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
@@ -103,7 +105,7 @@ class SongMixin:
             lambda e, num=tab_num: asyncio.ensure_future(
                 SongMixin.resize_sheet(self, e, num)))
         self.so_tabs[tab_num]['sheet'] = sheet
-        sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W+tk.S+tk.E)
+        sheet.grid(column=1, row=0, sticky=tk.N+tk.W+tk.S+tk.E)
 
         config = Song(
             self.so_data_path, self.include_path, song).get_config()
