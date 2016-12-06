@@ -280,8 +280,8 @@ class MainWindow(ExerciseMixin, SongMixin):
             return
 
         self.image_cache = {}
-        ExerciseMixin.clear_cache(self)
-        SongMixin.clear_cache(self)
+        await ExerciseMixin.clear_cache(self)
+        await SongMixin.clear_cache(self)
 
     async def stop(self):
         """Stop midi regardless of state."""
