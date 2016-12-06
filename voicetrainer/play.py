@@ -1,25 +1,45 @@
 """Play midi via fluidsynth."""
 from typing import Callable
-from os.path import dirname, join, realpath
 from pathlib import Path
-from asyncio import create_subprocess_exec, sleep, get_event_loop
+from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE, Process
 
-async def get_qsynth_port() -> str:
-    """Check on wich midi port qsynth is running, retry every 5 seconds."""
-    while True:
-        result = await create_subprocess_exec(
-            'pmidi', '-l', stdout=PIPE, stderr=PIPE)
-        output, err = await result.communicate()
-        if result.returncode != 0:
-            raise OSError('pmidi not functioning {}'.format(err))
-        output = bytes.decode(output).split('\n')
+async def list_ports() -> str:
+    """List pmidi ports."""
+    result = await create_subprocess_exec(
+        'pmidi', '-l', stdout=PIPE, stderr=PIPE)
+    output, err = await result.communicate()
+    if result.returncode != 0:
+        raise OSError('pmidi not functioning {}'.format(err))
+    return bytes.decode(output).split('\n')
+
+class PortFinder:
+
+    """Find correct pmidi port."""
+
+    match = None
+    port = None
+
+    async def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self.port is None:
+            self.port = await self.fetch_data()
+            return self.port
+        else:
+            raise StopAsyncIteration
+
+    async def fetch_data(self):
+        """Match ports."""
+        output = await list_ports()
+        default_match = 'FLUID'
         for line in output:
-            match = ['Qsynth', 'qsynth', 'FLUID']
-            if any([word in line for word in match]):
-                # extract port
+            use_match = self.match if self.match is not None and \
+                self.match != '' else default_match
+            if use_match in line:
+                # extract ports
                 return line.strip().split(' ')[0]
-        await sleep(5)
 
 async def play_midi(port: str, midi: Path) -> Process:
     """Start playing midi file."""
@@ -35,15 +55,3 @@ async def exec_on_midi_end(proc: Process, func: Callable) -> int:
     return_code = await proc.wait()
     await func()
     return return_code
-
-if __name__ == "__main__":
-    # pylint: disable=invalid-name
-    loop = get_event_loop()
-    port_ = loop.run_until_complete(get_qsynth_port())
-    proc_ = loop.run_until_complete(play_midi(
-        port_,
-        join(
-            dirname(realpath(__file__)),
-            "../exercises/control-140bpm-d.midi")))
-    loop.run_until_complete(exec_on_midi_end(proc_, lambda: print('finis')))
-    loop.close()
