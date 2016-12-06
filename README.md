@@ -44,7 +44,6 @@ voicetrainer
 ## Todo
 * tweak pmidi settings (shorter sleep after midi end)
 * deal with multi-page song sheets
-* add measure selector to songs tab
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing

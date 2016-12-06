@@ -52,6 +52,9 @@ class SongMixin:
         tab_num = len(self.so_tabs) - 1
         self.so_tabs[tab_num]['tab'] = tab
 
+        config = Song(
+            self.so_data_path, self.include_path, song).get_config()
+
         # controls
         frame = ttk.Frame(tab)
         self.so_tabs[tab_num]['control_frame'] = frame
@@ -70,6 +73,10 @@ class SongMixin:
             length=300,
             resolution=1,
             orient=tk.VERTICAL)
+        if 'tempo' in config:
+            bpm.set(int(config['tempo']))
+        else:
+            bpm.set(140)
         self.so_tabs[tab_num]['bpm'] = bpm
         bpm.grid(column=1, row=0, sticky=tk.W+tk.N)
 
@@ -77,6 +84,10 @@ class SongMixin:
         self.so_tabs[tab_num]['key_label'] = key_label
         key_label.grid(column=0, row=1, sticky=tk.N+tk.E)
         textvar = tk.StringVar()
+        if 'key' in config:
+            textvar.set(config['key'])
+        else:
+            textvar.set('c')
         self.so_tabs[tab_num]['curr_pitch'] = textvar
         curr_pitch = tk.OptionMenu(
             frame,
@@ -87,6 +98,25 @@ class SongMixin:
         self.so_tabs[tab_num]['pitch_menu'] = curr_pitch
         curr_pitch.grid(column=1, row=1, sticky=tk.W+tk.N)
 
+        if 'measures' in config:
+            measure_list = [str(i) for i in range(
+                1, int(config['measures']) + 1)]
+        else:
+            measure_list = ['1']
+        measure_label = ttk.Label(frame, text="start from:")
+        self.so_tabs[tab_num]['measure_label'] = measure_label
+        measure_label.grid(column=0, row=2, sticky=tk.N+tk.E)
+        measure = tk.StringVar()
+        measure.set('1')
+        self.so_tabs[tab_num]['curr_measure'] = measure
+        curr_measure = tk.OptionMenu(
+            frame,
+            measure,
+            *measure_list)
+        self.so_tabs[tab_num]['measure_menu'] = curr_measure
+        curr_measure.grid(column=1, row=2, sticky=tk.W+tk.N)
+
+
         play_stop = tk.StringVar()
         play_stop.set("play")
         self.so_tabs[tab_num]['play_stop'] = play_stop
@@ -96,7 +126,7 @@ class SongMixin:
             command=lambda: asyncio.ensure_future(
                 SongMixin.play_or_stop(self)))
         self.so_tabs[tab_num]['play'] = play
-        play.grid(column=0, row=2, columnspan=2, sticky=tk.W+tk.N)
+        play.grid(column=0, row=3, columnspan=2, sticky=tk.W+tk.N)
 
         # sheet display
         sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
@@ -107,17 +137,6 @@ class SongMixin:
         self.so_tabs[tab_num]['sheet'] = sheet
         sheet.grid(column=1, row=0, sticky=tk.N+tk.W+tk.S+tk.E)
 
-        config = Song(
-            self.so_data_path, self.include_path, song).get_config()
-
-        if 'key' in config:
-            textvar.set(config['key'])
-        else:
-            textvar.set('c')
-        if 'tempo' in config:
-            bpm.set(int(config['tempo']))
-        else:
-            bpm.set(140)
         asyncio.ensure_future(
             SongMixin.update_sheet(self, tab_num=tab_num))
 
@@ -195,13 +214,15 @@ class SongMixin:
             tab_num = self.so_num
         tab_name = self.so_notebook.tab(tab_num)['text']
         pitch = self.so_tabs[tab_num]['curr_pitch'].get()
+        measure = int(self.so_tabs[tab_num]['curr_measure'].get())
         bpm = int(self.so_tabs[tab_num]['bpm'].get())
         return Song(
             self.so_data_path,
             self.include_path,
             name=tab_name,
             pitch=pitch,
-            bpm=bpm)
+            bpm=bpm,
+            start_measure=measure)
 
     async def export(self, file_type: FileType):
         """Export compiled data."""

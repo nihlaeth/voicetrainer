@@ -2,6 +2,7 @@
 \include "articulate.ly"
 \version "2.19.50"
 % voicetrainer: tempo = 84
+% voicetrainer: measures = 6
 \header {
   title = "Test song"
 }
