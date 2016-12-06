@@ -13,6 +13,7 @@ setup(
         '*.json',
         'exercises/*',
         'include/*',
+        'config/*',
         'songs/*']},
     install_requires=['music21', 'pillow'],
     entry_points={

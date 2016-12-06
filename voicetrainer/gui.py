@@ -33,7 +33,7 @@ class MainWindow(ExerciseMixin, SongMixin):
     def __init__(self, root):
         self.data_path = Path(resource_filename(
             Requirement.parse("voicetrainer"),
-            'voicetrainer/exercises'))
+            'voicetrainer/config'))
         self.include_path = Path(resource_filename(
             Requirement.parse("voicetrainer"),
             'voicetrainer/include'))

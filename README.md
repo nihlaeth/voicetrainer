@@ -42,7 +42,6 @@ voicetrainer
 ```
 
 ## Todo
-* put state file in config dir, not in exercises
 * tweak pmidi settings (shorter sleep after midi end)
 * deal with multi-page song sheets
 * add measure selector to songs tab
