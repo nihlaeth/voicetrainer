@@ -65,7 +65,6 @@ class SongMixin:
             length=300,
             resolution=10,
             orient=tk.HORIZONTAL)
-        bpm.set(140)
         self.so_tabs[tab_num]['bpm'] = bpm
         bpm.grid(column=3, row=0, sticky=tk.W+tk.N)
 
@@ -76,9 +75,6 @@ class SongMixin:
         # sound pitch random autonext repeat_once next play/stop
 
         textvar = tk.StringVar()
-        # TODO: set default to natural pitch
-        # textvar.set(self.so_pitch_list[listbox.curselection()[0]])
-        textvar.set('c')
         self.so_tabs[tab_num]['curr_pitch'] = textvar
         curr_pitch = tk.OptionMenu(
             frame,
@@ -108,6 +104,18 @@ class SongMixin:
                 SongMixin.resize_sheet(self, e, num)))
         self.so_tabs[tab_num]['sheet'] = sheet
         sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W+tk.S+tk.E)
+
+        config = Song(
+            self.so_data_path, self.include_path, song).get_config()
+
+        if 'key' in config:
+            textvar.set(config['key'])
+        else:
+            textvar.set('c')
+        if 'tempo' in config:
+            bpm.set(int(config['tempo']))
+        else:
+            bpm.set(140)
         asyncio.ensure_future(
             SongMixin.update_sheet(self, tab_num=tab_num))
 

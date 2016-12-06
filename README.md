@@ -46,7 +46,6 @@ voicetrainer
 * tweak pmidi settings (shorter sleep after midi end)
 * deal with multi-page song sheets
 * add measure selector to songs tab
-* fetch natural tempo and key from lily code
 * move song controls to logical place
 
 ## Problems

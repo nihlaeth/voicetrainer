@@ -3,6 +3,11 @@ from pathlib import Path
 from enum import Enum
 from typing import List
 from string import Template
+import re
+
+def tokenize(text):
+    """Break down text into a list of words."""
+    return re.findall(r"\\?[%=:{}()]|\\?[a-zA-Z_\-0-9,.']+", text)
 
 class FileType(Enum):
 
@@ -120,6 +125,27 @@ class Interface:
                 tempo=self.bpm,
                 pitch=self.pitch,
                 pitch_noheight=self.pitch[0])
+
+    def get_config(self):
+        """Extract config from lily code."""
+        lily = self.get_raw_lily_code().split('\n')
+        data = {}
+        for line in lily:
+            tokens = tokenize(line)
+            # read config from comments
+            if len(tokens) > 5 and \
+                    tokens[0] == '%' and \
+                    tokens[1] == 'voicetrainer' and \
+                    tokens[2] == ':' and\
+                    tokens[4] == '=':
+                if tokens[3] not in data:
+                    data[tokens[3]] = tokens[5]
+            # extract key
+            if '\\transpose' in tokens:
+                index_transpose = tokens.index('\\transpose')
+                if 'key' not in data and len(data) > index_transpose + 1:
+                    data['key'] = tokens[index_transpose + 1]
+        return data
 
 class Exercise(Interface):
 

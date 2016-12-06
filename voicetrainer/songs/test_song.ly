@@ -1,7 +1,7 @@
 \include "color-pitch.ly"
 \include "articulate.ly"
 \version "2.19.50"
-
+% voicetrainer: tempo = 84
 \header {
   title = "Test song"
 }
