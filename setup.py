@@ -7,7 +7,7 @@ setup(
     description='midi voice exercises',
     author='nihlaeth',
     author_email='info@nihlaeth.nl',
-    python_requires='>=3.5',
+    python_requires='>=3.5.1',
     packages=find_packages(),
     package_data={'voicetrainer': [
         '*.json',
@@ -15,7 +15,7 @@ setup(
         'include/*',
         'config/*',
         'songs/*']},
-    install_requires=['music21', 'pillow'],
+    install_requires=['pillow'],
     entry_points={
         'gui_scripts': [
             'voicetrainer = voicetrainer.gui:start']})
