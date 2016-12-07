@@ -148,7 +148,7 @@ class Interface:
             # extract key
             if '\\transpose' in tokens:
                 index_transpose = tokens.index('\\transpose')
-                if 'key' not in data and len(data) > index_transpose + 1:
+                if 'key' not in data and len(tokens) > index_transpose + 1:
                     data['key'] = tokens[index_transpose + 1]
         return data
 
