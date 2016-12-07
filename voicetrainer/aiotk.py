@@ -411,3 +411,19 @@ class SaveFileDialog(FileDialog):
             if not confirm_overwrite:
                 return
         self.quit(file_)
+
+class DirDialog(FileDialog):
+
+    """Directory selection dialog which creates path if need be."""
+
+    title = "Directory Selection Dialog"
+
+    async def ok_command(self, _=None):
+        file_ = self.get_selection()
+        if file_.exists():
+            if not file_.is_dir():
+                self.root.bell()
+                return
+        else:
+            file_.mkdir(parents=True)
+        self.quit(file_)
