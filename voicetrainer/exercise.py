@@ -7,7 +7,6 @@ from itertools import product, chain
 from functools import partial
 from collections import namedtuple
 from random import choice
-from pkg_resources import resource_filename, Requirement
 
 from voicetrainer.aiotk import (
     ErrorDialog,
@@ -35,9 +34,8 @@ class ExerciseMixin:
     """
 
     def __init__(self):
-        self.ex_data_path = Path(resource_filename(
-            Requirement.parse("voicetrainer"),
-            'voicetrainer/exercises'))
+        self.ex_data_path = self.data_path.joinpath('exercises')
+        self.ex_data_path.mkdir(exist_ok=True)
         self.ex_pitch_list = [note + octave for octave, note in product(
             [',', '', '\''],
             list("cdefgab"))]

@@ -9,12 +9,6 @@ setup(
     author_email='info@nihlaeth.nl',
     python_requires='>=3.5.1',
     packages=find_packages(),
-    package_data={'voicetrainer': [
-        '*.json',
-        'exercises/*',
-        'include/*',
-        'config/*',
-        'songs/*']},
     install_requires=['pillow'],
     entry_points={
         'gui_scripts': [

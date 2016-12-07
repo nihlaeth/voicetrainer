@@ -4,7 +4,6 @@ import tkinter as tk
 import asyncio
 from pathlib import Path
 import json
-from pkg_resources import resource_filename, Requirement, cleanup_resources
 
 from PIL import Image, ImageTk
 
@@ -31,12 +30,10 @@ class MainWindow(ExerciseMixin, SongMixin):
     """Voicetrainer application."""
 
     def __init__(self, root):
-        self.data_path = Path(resource_filename(
-            Requirement.parse("voicetrainer"),
-            'voicetrainer/config'))
-        self.include_path = Path(resource_filename(
-            Requirement.parse("voicetrainer"),
-            'voicetrainer/include'))
+        self.data_path = Path().home().joinpath('.voicetrainer')
+        self.data_path.mkdir(exist_ok=True)
+        self.include_path = self.data_path.joinpath('include')
+        self.include_path.mkdir(exist_ok=True)
         self.root = root
 
         # compiler state
@@ -178,6 +175,7 @@ class MainWindow(ExerciseMixin, SongMixin):
     def save_state(self):
         """Save settings to json file."""
         data = {}
+        data['port_match'] = self.port_match
         data['exercises'] = ExerciseMixin.save_state(self)
         data['songs'] = SongMixin.save_state(self)
         self.data_path.joinpath('state.json').write_text(
@@ -189,6 +187,8 @@ class MainWindow(ExerciseMixin, SongMixin):
         if not state_file.is_file():
             return
         data = json.loads(state_file.read_text())
+        if 'port_match' in data:
+            self.port_match = data['port_match']
         if 'exercises' in data:
             ExerciseMixin.restore_state(self, data['exercises'])
         if 'songs' in data:
@@ -310,4 +310,3 @@ def start():
         root.close(crash=True)
     finally:
         loop.close()
-        cleanup_resources()
