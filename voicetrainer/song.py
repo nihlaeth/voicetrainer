@@ -100,22 +100,20 @@ class SongMixin:
         curr_pitch.grid(column=1, row=1, sticky=tk.W+tk.N)
 
         if 'measures' in config:
-            measure_list = [str(i) for i in range(
-                1, int(config['measures']) + 1)]
+            max_measure = int(config['measures'])
         else:
-            measure_list = ['1']
+            max_measure = 1
+        measure = tk.Spinbox(
+            frame,
+            width=3,
+            from_=1,
+            to=max_measure,
+            increment=1)
         measure_label = ttk.Label(frame, text="start from:")
         self.so_tabs[tab_num]['measure_label'] = measure_label
         measure_label.grid(column=0, row=2, sticky=tk.N+tk.E)
-        measure = tk.StringVar()
-        measure.set('1')
         self.so_tabs[tab_num]['curr_measure'] = measure
-        curr_measure = tk.OptionMenu(
-            frame,
-            measure,
-            *measure_list)
-        self.so_tabs[tab_num]['measure_menu'] = curr_measure
-        curr_measure.grid(column=1, row=2, sticky=tk.W+tk.N)
+        measure.grid(column=1, row=2, sticky=tk.W+tk.N)
 
         first_page = ttk.Button(
             frame,
