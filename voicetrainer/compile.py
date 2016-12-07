@@ -6,7 +6,8 @@ from asyncio import create_subprocess_exec, get_event_loop
 from asyncio.subprocess import PIPE
 from pkg_resources import resource_filename, Requirement, cleanup_resources
 
-from voicetrainer.midi import MidiFile, MidiTrack, getNumbersAsList
+from voicetrainer.midi import (
+    MidiFile, MidiTrack, DeltaTime, MidiEvent, getNumbersAsList)
 from voicetrainer.compile_interface import FileType, Interface, Exercise, Song
 
 def get_measure_num(time_changes, total_ticks, ticks_per_quarter_note):
@@ -14,6 +15,7 @@ def get_measure_num(time_changes, total_ticks, ticks_per_quarter_note):
     measure = 1
     curr_tick = 0
     curr_quarts_m = 4
+    # pylint: disable=consider-using-enumerate
     for i in range(len(time_changes)):
         stop = False
         next_tick, next_quarts_m = time_changes[i]
@@ -52,12 +54,40 @@ async def compile_(interface: Interface, file_type: FileType) -> Tuple[str, str]
         interface.get_final_lily_code(file_type)))
     if file_type is FileType.midi and \
             interface.has_start_measure and interface.start_measure > 1:
-        create_clipped_midi(interface)
+        await create_clipped_midi(interface)
     return (bytes.decode(outs), bytes.decode(errs))
 
-def create_clipped_midi(interface: Interface):
+def midi_generator(midi: MidiFile) -> Tuple[int, DeltaTime, MidiEvent]:
+    """Iterate over midi events."""
+    for i, track in enumerate(midi.tracks):
+        delta_time = None
+        for event in track.events:
+            if event.isDeltaTime():
+                delta_time = event
+            else:
+                yield (i, delta_time, event)
+
+# pylint: disable=too-few-public-methods
+class MidiIterator:
+
+    """Wrap midi_generator so it can be used asynchronously."""
+
+    def __init__(self, midi: MidiFile):
+        self.midi = midi
+        self.iterator = midi_generator(midi)
+
+    async def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self.iterator)
+        except StopIteration:
+            raise StopAsyncIteration
+
+
+async def create_clipped_midi(interface: Interface):
     """Start midi from start_measure, with events intact."""
-    # TODO: refactor this - maybe an asynce iterator will do?
     midi = MidiFile()
     midi.open(str(interface.get_filename(
         FileType.midi, compiling=True)))
@@ -66,49 +96,41 @@ def create_clipped_midi(interface: Interface):
     ticks_per_quarter_note = midi.ticksPerQuarterNote
     # collect time_changes
     time_changes = []
-    for track in midi.tracks:
-        total_ticks = 0
-        for event in track.events:
-            if event.isDeltaTime():
-                total_ticks += event.time
-            elif event.type == "TIME_SIGNATURE":
-                t_signature = getNumbersAsList(event.data)
-                num = t_signature[0]
-                div = pow(2, t_signature[1])
-                time_changes.append(
-                    (total_ticks, (num / div) * 4))
+    total_ticks = []
+    async for track_num, delta_time, event in MidiIterator(midi):
+        if len(total_ticks) == track_num:
+            total_ticks.append(0)
+        total_ticks[track_num] += delta_time.time
+        if event.type == "TIME_SIGNATURE":
+            t_signature = getNumbersAsList(event.data)
+            num = t_signature[0]
+            div = pow(2, t_signature[1])
+            time_changes.append(
+                (total_ticks[track_num], (num / div) * 4))
     # construct new midi
+    total_ticks = []
     new_midi = MidiFile()
-    for i, track in enumerate(midi.tracks):
-        total_ticks = 0
-        new_track = MidiTrack(i)
-        measure = 1
-        for c, event in enumerate(track.events):
-            if event.isDeltaTime():
-                total_ticks += event.time
-                measure = get_measure_num(
-                    time_changes,
-                    total_ticks,
-                    ticks_per_quarter_note)
-                # peek at next event
-                if c + 1 == len(track.events):
-                    new_track.events.append(event)
-                    continue
-                next_event = track.events[c + 1]
-                if next_event.type in [
-                        'NOTE_ON', 'NOTE_OFF'] and \
-                        measure < interface.start_measure:
-                    continue
-                else:
-                    new_track.events.append(event)
-            elif event.type in ['NOTE_ON', 'NOTE_OFF']:
-                if measure >= interface.start_measure:
-                    new_track.events.append(event)
-            else:
-                new_track.events.append(event)
-        new_track.updateEvents()
-        new_midi.tracks.append(new_track)
-    # print(new_midi)
+    async for track_num, delta_time, event in MidiIterator(midi):
+        if len(total_ticks) == track_num:
+            total_ticks.append(0)
+            new_midi.tracks.append(MidiTrack(track_num))
+        total_ticks[track_num] += delta_time.time
+        measure = get_measure_num(
+            time_changes,
+            total_ticks[track_num],
+            ticks_per_quarter_note)
+        if event.type in ['NOTE_ON', 'NOTE_OFF'] and \
+                measure < interface.start_measure:
+            continue
+        else:
+            if measure < interface.start_measure:
+                # insert event with timedelta 0
+                delta_time.time = 0
+            new_midi.tracks[track_num].events.append(delta_time)
+            new_midi.tracks[track_num].events.append(event)
+    for track in new_midi.tracks:
+        track.updateEvents()
+    print(new_midi)
     new_midi.open(str(interface.get_filename(FileType.midi)), 'wb')
     new_midi.write()
     new_midi.close()
@@ -137,17 +159,18 @@ async  def compile_all(path: Path, include_path: Path) -> List[Tuple[str, str]]:
     return log
 
 if __name__ == '__main__':
-    data_path = Path(resource_filename(
+    data_path_ = Path(resource_filename(
         Requirement.parse("voicetrainer"),
         'voicetrainer/songs'))
-    include_path = Path(resource_filename(
+    include_path_ = Path(resource_filename(
         Requirement.parse("voicetrainer"),
         'voicetrainer/include'))
-    interface = Song(
-        data_path,
-        include_path,
+    interface_ = Song(
+        data_path_,
+        include_path_,
         name='test_song',
         start_measure=2)
     loop = get_event_loop()
-    loop.run_until_complete(compile_(interface, FileType.midi))
+    loop.run_until_complete(compile_(interface_, FileType.midi))
+    loop.close()
     cleanup_resources()

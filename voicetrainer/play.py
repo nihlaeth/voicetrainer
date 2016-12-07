@@ -13,6 +13,7 @@ async def list_ports() -> str:
         raise OSError('pmidi not functioning {}'.format(err))
     return bytes.decode(output).split('\n')
 
+# pylint: disable=too-few-public-methods
 class PortFinder:
 
     """Find correct pmidi port."""
