@@ -423,7 +423,7 @@ class SongMixin:
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""
         asyncio.ensure_future(SongMixin.update_sheet(self))
-        await self.get_file(FileType.midi)
+        await self.get_file(SongMixin.get_so_interface(self), FileType.midi)
 
     async def play_or_stop(self):
         """Play or stop midi."""
