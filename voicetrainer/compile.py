@@ -2,13 +2,12 @@
 from typing import List, Tuple
 from pathlib import Path
 from itertools import product
-from asyncio import create_subprocess_exec, get_event_loop
+from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
-from pkg_resources import resource_filename, Requirement, cleanup_resources
 
 from voicetrainer.midi import (
     MidiFile, MidiTrack, DeltaTime, MidiEvent, getNumbersAsList)
-from voicetrainer.compile_interface import FileType, Interface, Exercise, Song
+from voicetrainer.compile_interface import FileType, Interface, Exercise
 
 def get_measure_num(time_changes, total_ticks, ticks_per_quarter_note):
     """Get current measure number."""
@@ -131,7 +130,6 @@ async def create_clipped_midi(interface: Interface):
             new_midi.tracks[track_num].events.append(event)
     for track in new_midi.tracks:
         track.updateEvents()
-    print(new_midi)
     new_midi.open(str(interface.get_filename(FileType.midi)), 'wb')
     new_midi.write()
     new_midi.close()
@@ -158,20 +156,3 @@ async  def compile_all(path: Path, include_path: Path) -> List[Tuple[str, str]]:
                 sound=combo[3])
             log.append(await compile_(exercise, combo[0]))
     return log
-
-if __name__ == '__main__':
-    data_path_ = Path(resource_filename(
-        Requirement.parse("voicetrainer"),
-        'voicetrainer/songs'))
-    include_path_ = Path(resource_filename(
-        Requirement.parse("voicetrainer"),
-        'voicetrainer/include'))
-    interface_ = Song(
-        data_path_,
-        include_path_,
-        name='test_song',
-        start_measure=2)
-    loop = get_event_loop()
-    loop.run_until_complete(compile_(interface_, FileType.midi))
-    loop.close()
-    cleanup_resources()
