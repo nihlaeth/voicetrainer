@@ -43,7 +43,6 @@ voicetrainer
 
 ## Todo
 * tweak pmidi settings (shorter sleep after midi end)
-* deal width naming difference between single and multi page songs
 * add buttons for switching pages
 * increment page on click
 * switch page by scrolling

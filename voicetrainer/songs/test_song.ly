@@ -3,6 +3,7 @@
 \version "2.19.50"
 % voicetrainer: tempo = 84
 % voicetrainer: measures = 6
+% voicetrainer: pages = 3
 \header {
   title = "Test song"
 }
