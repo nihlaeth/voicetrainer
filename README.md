@@ -53,5 +53,6 @@ voicetrainer
 ## Planned features
 * select dynamics
 * allow selecting different midi synthesizers
+* select instruments for midi songs
 * user-specific settings and exercises
 * compile exercise before it's started
