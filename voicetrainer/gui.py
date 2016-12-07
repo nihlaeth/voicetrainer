@@ -265,6 +265,10 @@ class MainWindow(ExerciseMixin, SongMixin):
             self.image_cache[png] = {}
             self.image_cache[png]['original'] = Image.open(str(png))
         original = self.image_cache[png]['original']
+        if max_width < 1:
+            max_width = 1
+        if max_height < 1:
+            max_height = 1
         width_ratio = float(original.width) / float(max_width)
         height_ratio = float(original.height) / float(max_height)
         ratio = max([width_ratio, height_ratio])

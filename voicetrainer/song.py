@@ -51,6 +51,7 @@ class SongMixin:
         self.so_tabs.append({})
         tab_num = len(self.so_tabs) - 1
         self.so_tabs[tab_num]['tab'] = tab
+        self.so_tabs[tab_num]['page'] = 1
 
         config = Song(
             self.so_data_path, self.include_path, song).get_config()
@@ -324,17 +325,40 @@ class SongMixin:
 
     async def resize_sheet(self, event, tab_num):
         """Resize sheets to screen size."""
-        left = await self.get_single_sheet(
-            SongMixin.get_so_interface(self, tab_num),
-            event.width/2,
-            event.height)
         self.so_tabs[tab_num]['sheet'].delete("left")
+        left = SongMixin.get_so_interface(self, tab_num)
+        # make sure pages are compiled
+        await self.get_file(left)
+        left.page = self.so_tabs[tab_num]['page']
+        if not left.get_filename(FileType.png).is_file():
+            # page does not exists, roll around to 1
+            self.so_tabs[tab_num]['page'] = 1
+            left.page = 1
+        left_path = await self.get_single_sheet(
+            left,
+            (event.width - 1)/2,
+            event.height)
         self.so_tabs[tab_num]['sheet'].create_image(
             0,
             0,
-            image=self.image_cache[left]['image'],
+            image=self.image_cache[left_path]['image'],
             anchor=tk.NW,
             tags="left")
+        # right page
+        self.so_tabs[tab_num]['sheet'].delete("right")
+        right = SongMixin.get_so_interface(self, tab_num)
+        right.page = self.so_tabs[tab_num]['page'] + 1
+        if right.get_filename(FileType.png).is_file():
+            right_path = await self.get_single_sheet(
+                right,
+                (event.width - 1)/2,
+                event.height)
+            self.so_tabs[tab_num]['sheet'].create_image(
+                self.image_cache[left_path]['image'].width() + 1,
+                0,
+                image=self.image_cache[right_path]['image'],
+                anchor=tk.NW,
+                tags="right")
 
     async def on_pitch_change(self):
         """New pitch was picked by user or app."""

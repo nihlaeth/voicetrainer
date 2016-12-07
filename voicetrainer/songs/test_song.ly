@@ -17,11 +17,11 @@ exercise = {
     \key c \major
     < c e g >2\sustainOn
     \repeat unfold 2 {
-      \breathe c4->( d e f
-      g2)
+      \breathe c4->( d e \pageBreak f
+      g2) \pageBreak
     }
-    \breathe c,4->( d e f
-    g f e d
+    \breathe c,4->( d e \pageBreak f
+    g f \pageBreak e d
     c2 \sustainOff ) \bar "||" \break
   }
 }
