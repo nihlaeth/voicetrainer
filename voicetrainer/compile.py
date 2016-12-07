@@ -19,8 +19,8 @@ def get_measure_num(time_changes, total_ticks, ticks_per_quarter_note):
     for i in range(len(time_changes)):
         stop = False
         next_tick, next_quarts_m = time_changes[i]
-        if next_tick == 0:
-            # overwrite default quarts_per_minute
+        if next_tick == curr_tick:
+            # overwrite current quarts_per_minute
             curr_quarts_m = next_quarts_m
             continue
         if total_ticks < next_tick:
@@ -110,6 +110,7 @@ async def create_clipped_midi(interface: Interface):
     # construct new midi
     total_ticks = []
     new_midi = MidiFile()
+    new_midi.ticksPerQuarterNote = midi.ticksPerQuarterNote
     async for track_num, delta_time, event in MidiIterator(midi):
         if len(total_ticks) == track_num:
             total_ticks.append(0)
