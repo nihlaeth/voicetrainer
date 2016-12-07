@@ -6,6 +6,7 @@ from pathlib import Path
 from itertools import product, chain
 from functools import partial
 from collections import namedtuple
+from datetime import datetime
 from pkg_resources import resource_filename, Requirement
 
 from voicetrainer.aiotk import (
@@ -39,6 +40,7 @@ class SongMixin:
             [',', '', '\''],
             list("cdefgab"))]
         self.so_tabs = []
+        self.so_scroll_time = datetime.now()
 
         SongMixin.create_widgets(self)
 
@@ -117,6 +119,38 @@ class SongMixin:
         self.so_tabs[tab_num]['measure_menu'] = curr_measure
         curr_measure.grid(column=1, row=2, sticky=tk.W+tk.N)
 
+        first_page = ttk.Button(
+            frame,
+            text='First page',
+            command=lambda: SongMixin.change_page(self, page=1))
+        self.so_tabs[tab_num]['first_page'] = first_page
+        first_page.grid(column=0, row=3, columnspan=2, sticky=tk.W+tk.N+tk.E)
+
+        next_page = ttk.Button(
+            frame,
+            text='Next page',
+            command=lambda: SongMixin.change_page(self))
+        self.so_tabs[tab_num]['next_page'] = next_page
+        next_page.grid(column=0, row=4, columnspan=2, sticky=tk.W+tk.N+tk.E)
+
+        prev_page = ttk.Button(
+            frame,
+            text='Previous page',
+            command=lambda: SongMixin.change_page(self, increment=False))
+        self.so_tabs[tab_num]['prev_page'] = prev_page
+        prev_page.grid(column=0, row=5, columnspan=2, sticky=tk.W+tk.N+tk.E)
+
+        if 'pages' in config:
+            num_pages = int(config['pages'])
+        else:
+            num_pages = 1
+        last_page = ttk.Button(
+            frame,
+            text='Last page',
+            command=lambda last=num_pages: SongMixin.change_page(
+                self, page=last))
+        self.so_tabs[tab_num]['last_page'] = last_page
+        last_page.grid(column=0, row=6, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         play_stop = tk.StringVar()
         play_stop.set("play")
@@ -127,7 +161,7 @@ class SongMixin:
             command=lambda: asyncio.ensure_future(
                 SongMixin.play_or_stop(self)))
         self.so_tabs[tab_num]['play'] = play
-        play.grid(column=0, row=3, columnspan=2, sticky=tk.W+tk.N)
+        play.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         # sheet display
         sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
@@ -137,6 +171,18 @@ class SongMixin:
                 SongMixin.resize_sheet(self, e, num)))
         self.so_tabs[tab_num]['sheet'] = sheet
         sheet.grid(column=1, row=0, sticky=tk.N+tk.W+tk.S+tk.E)
+
+        # sheet mouse events
+        sheet.bind(
+            "<Button-1>",
+            lambda e: SongMixin.change_page(self))
+        sheet.bind(
+            "<Button-4>",
+            lambda e: SongMixin.change_page(
+                self, scroll=True, increment=False))
+        sheet.bind(
+            "<Button-5>",
+            lambda e: SongMixin.change_page(self, scroll=True))
 
         asyncio.ensure_future(
             SongMixin.update_sheet(self, tab_num=tab_num))
@@ -312,6 +358,22 @@ class SongMixin:
         # display fresh sheets
         for i in range(len(self.so_tabs)):
             await SongMixin.update_sheet(self, tab_num=i)
+
+    def change_page(self, increment=True, page=None, scroll=False):
+        """Change page."""
+        if scroll:
+            delta_t = datetime.now() - self.so_scroll_time
+            self.so_scroll_time = datetime.now()
+            if delta_t.total_seconds() < 0.5:
+                return
+        if page is not None:
+            self.so_tabs[self.so_num]['page'] = int(page)
+        elif increment:
+            self.so_tabs[self.so_num]['page'] += 1
+        else:
+            if self.so_tabs[self.so_num]['page'] > 1:
+                self.so_tabs[self.so_num]['page'] -= 1
+        asyncio.ensure_future(SongMixin.update_sheet(self))
 
     async def update_sheet(self, tab_num=None):
         """Display relevant sheet."""

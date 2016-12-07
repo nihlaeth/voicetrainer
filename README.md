@@ -43,9 +43,6 @@ voicetrainer
 
 ## Todo
 * tweak pmidi settings (shorter sleep after midi end)
-* add buttons for switching pages
-* increment page on click
-* switch page by scrolling
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
