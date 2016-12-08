@@ -11,8 +11,9 @@ from voicetrainer.aiotk import (
     Root,
     OkCancelDialog,
     ErrorDialog,
+    PortSelection,
     Messages)
-from voicetrainer.play import stop_midi, PortFinder
+from voicetrainer.play import stop_midi, PortFinder, list_ports
 from voicetrainer.exercise import ExerciseMixin
 from voicetrainer.song import SongMixin
 from voicetrainer.compile import compile_
@@ -64,7 +65,7 @@ class MainWindow(ExerciseMixin, SongMixin):
     async def find_port(self):
         """Find qsynth port."""
         try:
-            port_finder = PortFinder()
+            port_finder = PortFinder(self.port_match)
             async for port in port_finder:
                 if port is not None:
                     self.port = port
@@ -77,6 +78,18 @@ class MainWindow(ExerciseMixin, SongMixin):
                 self.root,
                 data="Could not find midi port\n{}".format(str(err)))
             raise
+
+    async def select_port(self):
+        """Change port matching."""
+        selection_dialog = PortSelection(
+            self.root,
+            data=await list_ports(),
+            current_port=self.port_match)
+        self.port_match = await selection_dialog.await_data()
+        if self.port is not None:
+            # not currently searching for port, start
+            self.port = None
+            await self.find_port()
 
     def create_widgets(self):
         """Put some stuff up to look at."""
@@ -95,6 +108,9 @@ class MainWindow(ExerciseMixin, SongMixin):
 
         self.file_menu = tk.Menu(self.menubar)
         self.menubar.add_cascade(label='File', menu=self.file_menu)
+        self.file_menu.add_command(
+            label='Select port',
+            command=lambda: asyncio.ensure_future(self.select_port()))
         self.file_menu.add_command(
             label='Save state',
             command=self.save_state)

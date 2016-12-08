@@ -50,6 +50,5 @@ voicetrainer
 * it's possible to play 2 midi streams at the same time with the right timing
 
 ## Planned features
-* allow selecting different midi synthesizers
 * select instruments for midi songs
 * compile exercise before it's started

@@ -193,6 +193,68 @@ class Messages(Dialog):
         """Bring window to front."""
         self.top.lift()
 
+class PortSelection(Dialog):
+
+    """Dialog for changing port_match string."""
+
+    def __init__(self, root, data=None, on_close=None, current_port=None):
+        self.current_port = current_port
+        Dialog.__init__(self, root, data=data, on_close=on_close)
+
+    def create_widgets(self):
+        """Show question."""
+        self.frame.rowconfigure(0, weight=0)
+        self.frame.rowconfigure(1, weight=1)
+        self.top.protocol('WM_DELETE_WINDOW', self.cancel)
+        self.top.title("Select port")
+
+        self.label = ttk.Label(self.frame, text=(
+            "Select the piece of text that the pmidi port "
+            "should be matched on.\n\nDefault is: 'FLUID'\n"
+            "Current value is: '{}'\n\n"
+            "Tip: do not select newlines.").format(self.current_port))
+        self.label.grid(row=0, column=0, columnspan=2)
+
+        self.text = tk.Text(
+            self.frame,
+            exportselection=0,
+            height=len(self.data),
+            width=max([len(line) for line in self.data]),
+            wrap=tk.NONE)
+        self.text.grid(row=1, column=0, columnspan=2)
+        # self.text.delete(0, tk.END)
+        widget_text = '\n'.join(self.data)
+        self.text.insert(
+            tk.END,
+            widget_text)
+        if self.current_port in widget_text and '\n' not in self.current_port:
+            index = widget_text.index(self.current_port)
+            end_index = index + len(self.current_port)
+            self.text.tag_add(
+                tk.SEL,
+                "1.0 + {} chars".format(index),
+                "1.0 + {} chars".format(end_index))
+
+        self.ok_button = ttk.Button(
+            self.frame, text="Ok", command=self.confirm)
+        self.ok_button.grid(row=2, column=0)
+        self.cancel_button = ttk.Button(
+            self.frame, text="Cancel", command=self.cancel)
+        self.cancel_button.grid(row=2, column=1)
+
+    def confirm(self, _=None):
+        """User pressed ok."""
+        if self.text.tag_ranges(tk.SEL):
+            self.return_data = self.text.get(tk.SEL_FIRST, tk.SEL_LAST)
+        else:
+            self.return_data = self.current_port
+        self.return_event.set()
+
+    def cancel(self, _=None):
+        """User pressed cancel."""
+        self.return_data = self.current_port
+        self.return_event.set()
+
 # file dialogs adapted from:
 # https://hg.python.org/cpython/file/tip/Lib/tkinter/filedialog.py
 

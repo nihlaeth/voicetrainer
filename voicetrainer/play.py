@@ -18,8 +18,10 @@ class PortFinder:
 
     """Find correct pmidi port."""
 
-    match = None
     port = None
+
+    def __init__(self, match=None):
+        self.match = match
 
     async def __aiter__(self):
         return self
