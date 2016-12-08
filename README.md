@@ -45,6 +45,8 @@ voicetrainer
 ## Todo
 * tweak pmidi settings (shorter sleep after midi end)
 * document song feature and lily comment settings
+* refactor export to be in MainWindow and file menu
+* refactor mixins to use __ instead of ex_ and so_
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
