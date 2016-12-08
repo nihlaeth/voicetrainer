@@ -119,6 +119,17 @@ async def create_clipped_midi(interface: Interface):
             time_changes,
             total_ticks[track_num],
             ticks_per_quarter_note)
+
+        # adjust velocity
+        if event.type in ['NOTE_ON', 'NOTE_OFF']:
+            new_velocity = event.velocity + interface.velocity
+            if new_velocity < 0:
+                new_velocity = 0
+            elif new_velocity > 127:
+                new_velocity = 127
+            event.velocity = new_velocity
+
+        # the actual clipping
         if event.type in ['NOTE_ON', 'NOTE_OFF'] and \
                 measure < interface.start_measure:
             continue

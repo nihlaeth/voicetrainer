@@ -36,7 +36,8 @@ class Interface:
             bpm: int=140,
             sound: str='Mi',
             page: int=1,
-            start_measure: int=1) -> None:
+            start_measure: int=1,
+            velocity: int=0) -> None:
         self.data_path = data_path
         self.include_path = include_path
         self.name = name
@@ -45,6 +46,7 @@ class Interface:
         self.sound = sound
         self.page = page
         self.start_measure = start_measure
+        self.velocity = velocity
 
     def get_filename(self, file_type: FileType, compiling: bool=False):
         """Return full path."""
@@ -54,8 +56,10 @@ class Interface:
             measure = "-from-measure-{}".format(
                 self.start_measure if not compiling else 1) if \
                     self.has_start_measure else ""
-            return self.data_path.joinpath("{}-{}bpm-{}{}.midi".format(
-                self.name, self.bpm, self.pitch, measure))
+            velocity = "velocity{}".format(
+                self.velocity if not compiling else 0)
+            return self.data_path.joinpath("{}-{}bpm-{}-{}{}.midi".format(
+                self.name, self.bpm, self.pitch, velocity, measure))
         if file_type == FileType.png:
             sound = "-{}".format(self.sound) if self.has_sound else ""
             config = self.get_config()
