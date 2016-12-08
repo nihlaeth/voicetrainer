@@ -9,6 +9,23 @@ from voicetrainer.midi import (
     MidiFile, MidiTrack, DeltaTime, MidiEvent, getNumbersAsList)
 from voicetrainer.compile_interface import FileType, Interface, Exercise
 
+def measure_to_tick(time_changes, measure, ticks_per_quarter_note):
+    """Convert measure to tick."""
+    ticks = 0
+    closest_m = 1
+    quarts_m = 4
+    for next_tick, next_quarts_m in time_changes:
+        next_measure = get_measure_num(
+            time_changes, next_tick, ticks_per_quarter_note)
+        if next_measure > measure:
+            break
+        else:
+            closest_m = next_measure
+            ticks = next_tick
+            quarts_m = next_quarts_m
+    ticks += (measure - closest_m) * quarts_m * ticks_per_quarter_note
+    return ticks
+
 def get_measure_num(time_changes, total_ticks, ticks_per_quarter_note):
     """Get current measure number."""
     measure = 1
@@ -110,6 +127,7 @@ async def create_clipped_midi(interface: Interface):
     total_ticks = []
     new_midi = MidiFile()
     new_midi.ticksPerQuarterNote = midi.ticksPerQuarterNote
+    new_midi.format = midi.format
     async for track_num, delta_time, event in MidiIterator(midi):
         if len(total_ticks) == track_num:
             total_ticks.append(0)
@@ -137,6 +155,17 @@ async def create_clipped_midi(interface: Interface):
             if measure < interface.start_measure:
                 # insert event with timedelta 0
                 delta_time.time = 0
+            else:
+                prev_m = get_measure_num(
+                    time_changes,
+                    total_ticks[track_num] - delta_time.time,
+                    ticks_per_quarter_note)
+                if prev_m < interface.start_measure:
+                    delta_time.time = int(
+                        total_ticks[track_num] - measure_to_tick(
+                            time_changes,
+                            interface.start_measure,
+                            ticks_per_quarter_note))
             new_midi.tracks[track_num].events.append(delta_time)
             new_midi.tracks[track_num].events.append(event)
     for track in new_midi.tracks:
