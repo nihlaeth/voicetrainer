@@ -109,32 +109,44 @@ class SongMixin:
             from_=1,
             to=max_measure,
             increment=1)
-        measure_label = ttk.Label(frame, text="start from:")
+        measure_label = ttk.Label(frame, text="start from measure:")
         self.so_tabs[tab_num]['measure_label'] = measure_label
         measure_label.grid(column=0, row=2, sticky=tk.N+tk.E)
         self.so_tabs[tab_num]['curr_measure'] = measure
         measure.grid(column=1, row=2, sticky=tk.W+tk.N)
+
+        velocity = tk.Spinbox(
+            frame,
+            width=3,
+            from_=-50,
+            to=50,
+            increment=1)
+        velocity_label = ttk.Label(frame, text="relative velocity:")
+        self.so_tabs[tab_num]['velocity_label'] = velocity_label
+        velocity_label.grid(column=0, row=3, sticky=tk.N+tk.E)
+        self.so_tabs[tab_num]['velocity'] = velocity
+        velocity.grid(column=1, row=3, sticky=tk.W+tk.N)
 
         first_page = ttk.Button(
             frame,
             text='First page',
             command=lambda: SongMixin.change_page(self, page=1))
         self.so_tabs[tab_num]['first_page'] = first_page
-        first_page.grid(column=0, row=3, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        first_page.grid(column=0, row=4, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         next_page = ttk.Button(
             frame,
             text='Next page',
             command=lambda: SongMixin.change_page(self))
         self.so_tabs[tab_num]['next_page'] = next_page
-        next_page.grid(column=0, row=4, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        next_page.grid(column=0, row=5, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         prev_page = ttk.Button(
             frame,
             text='Previous page',
             command=lambda: SongMixin.change_page(self, increment=False))
         self.so_tabs[tab_num]['prev_page'] = prev_page
-        prev_page.grid(column=0, row=5, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        prev_page.grid(column=0, row=6, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         if 'pages' in config:
             num_pages = int(config['pages'])
@@ -146,7 +158,7 @@ class SongMixin:
             command=lambda last=num_pages: SongMixin.change_page(
                 self, page=last))
         self.so_tabs[tab_num]['last_page'] = last_page
-        last_page.grid(column=0, row=6, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        last_page.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         play_stop = tk.StringVar()
         play_stop.set("play")
@@ -157,7 +169,7 @@ class SongMixin:
             command=lambda: asyncio.ensure_future(
                 SongMixin.play_or_stop(self)))
         self.so_tabs[tab_num]['play'] = play
-        play.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        play.grid(column=0, row=8, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         # sheet display
         sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
@@ -259,13 +271,15 @@ class SongMixin:
         pitch = self.so_tabs[tab_num]['curr_pitch'].get()
         measure = int(self.so_tabs[tab_num]['curr_measure'].get())
         bpm = int(self.so_tabs[tab_num]['bpm'].get())
+        velocity = int(self.so_tabs[tab_num]['velocity'].get())
         return Song(
             self.so_data_path,
             self.include_path,
             name=tab_name,
             pitch=pitch,
             bpm=bpm,
-            start_measure=measure)
+            start_measure=measure,
+            velocity=velocity)
 
     async def export(self, file_type: FileType):
         """Export compiled data."""

@@ -96,6 +96,18 @@ class ExerciseMixin:
         frame.grid(column=2, row=2, columnspan=2, sticky=tk.W+tk.N)
         # sound pitch random autonext repeat_once next play/stop
 
+        velocity = tk.Spinbox(
+            frame,
+            width=3,
+            from_=-50,
+            to=50,
+            increment=1)
+        velocity_label = ttk.Label(frame, text="relative velocity:")
+        self.ex_tabs[tab_num]['velocity_label'] = velocity_label
+        velocity_label.grid(column=0, row=0, sticky=tk.N+tk.E)
+        self.ex_tabs[tab_num]['velocity'] = velocity
+        velocity.grid(column=1, row=0, sticky=tk.W+tk.N)
+
         soundvar = tk.StringVar()
         soundvar.set("Mi")
         self.ex_tabs[tab_num]['sound'] = soundvar
@@ -106,7 +118,7 @@ class ExerciseMixin:
             command=lambda _: asyncio.ensure_future(
                 ExerciseMixin.update_sheet(self)))
         self.ex_tabs[tab_num]['sound_menu'] = sound
-        sound.grid(column=0, row=0, sticky=tk.W+tk.N)
+        sound.grid(column=2, row=0, sticky=tk.W+tk.N)
 
         textvar = tk.StringVar()
         textvar.set(self.ex_pitch_list[listbox.curselection()[0]])
@@ -118,27 +130,27 @@ class ExerciseMixin:
             command=lambda _: asyncio.ensure_future(
                 ExerciseMixin.on_pitch_change(self)))
         self.ex_tabs[tab_num]['pitch_menu'] = curr_pitch
-        curr_pitch.grid(column=1, row=0, sticky=tk.W+tk.N)
+        curr_pitch.grid(column=3, row=0, sticky=tk.W+tk.N)
 
         rand_int = tk.IntVar()
         self.ex_tabs[tab_num]['random'] = rand_int
         random = ttk.Checkbutton(frame, text="random", variable=rand_int)
         self.ex_tabs[tab_num]['random_box'] = random
-        random.grid(column=2, row=0, sticky=tk.W+tk.N)
+        random.grid(column=4, row=0, sticky=tk.W+tk.N)
 
         auto_int = tk.IntVar()
         self.ex_tabs[tab_num]['autonext'] = auto_int
         autonext = ttk.Checkbutton(
             frame, text="autonext", variable=auto_int)
         self.ex_tabs[tab_num]['autonext_box'] = autonext
-        autonext.grid(column=3, row=0, sticky=tk.W+tk.N)
+        autonext.grid(column=5, row=0, sticky=tk.W+tk.N)
 
         repeat = ttk.Button(
             frame,
             text="repeat once",
             command=lambda: ExerciseMixin.set_repeat_once(self))
         self.ex_tabs[tab_num]['repeat'] = repeat
-        repeat.grid(column=4, row=0, sticky=tk.W+tk.N)
+        repeat.grid(column=6, row=0, sticky=tk.W+tk.N)
 
         next_ = ttk.Button(
             frame,
@@ -146,7 +158,7 @@ class ExerciseMixin:
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.next_(self)))
         self.ex_tabs[tab_num]['next_'] = next_
-        next_.grid(column=5, row=0, sticky=tk.W+tk.N)
+        next_.grid(column=7, row=0, sticky=tk.W+tk.N)
 
         play_stop = tk.StringVar()
         play_stop.set("play")
@@ -157,7 +169,7 @@ class ExerciseMixin:
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.play_or_stop(self)))
         self.ex_tabs[tab_num]['play'] = play
-        play.grid(column=6, row=0, sticky=tk.W+tk.N)
+        play.grid(column=8, row=0, sticky=tk.W+tk.N)
 
         # sheet display
         sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
@@ -289,13 +301,15 @@ class ExerciseMixin:
         pitch = self.ex_tabs[tab_num]['curr_pitch'].get()
         bpm = int(self.ex_tabs[tab_num]['bpm'].get())
         sound = self.ex_tabs[tab_num]['sound'].get()
+        velocity = int(self.ex_tabs[tab_num]['velocity'].get())
         return Exercise(
             self.ex_data_path,
             self.include_path,
             name=tab_name,
             pitch=pitch,
             bpm=bpm,
-            sound=sound)
+            sound=sound,
+            velocity=velocity)
 
     async def export(self, file_type: FileType):
         """Export compiled data."""
