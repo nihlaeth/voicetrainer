@@ -51,10 +51,10 @@ voicetrainer
 * reset midi after stopping or killing playback
 * phase out midion/off and sheeton/off vars in favor of comments
 * make release and publish
+* repeat once on click on exercise sheet
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
 
 ## Planned features
-* integrate jack transport
 * compile exercise before it's started

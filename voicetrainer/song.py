@@ -39,6 +39,7 @@ class SongMixin:
             list("cdefgab"))]
         self.so_tabs = []
         self.so_scroll_time = datetime.now()
+        self.so_jpmidi_port = None
 
         SongMixin.create_widgets(self)
 
@@ -214,6 +215,29 @@ class SongMixin:
         """Put some stuff up to look at."""
         self.so_menu = tk.Menu(self.menubar)
         self.menubar.add_cascade(label='Songs', menu=self.so_menu)
+        self.so_menu.add_command(label='Midi', state=tk.DISABLED)
+        self.so_menu.add_command(
+            label='Select jpmidi port',
+            command=lambda: asyncio.ensure_future(
+                self.select_port(pmidi=False)))
+        self.so_menu.add_separator()
+        self.so_menu.add_command(label='Options', state=tk.DISABLED)
+        self.so_midi_executable = tk.StringVar()
+        self.so_midi_executable.set('pmidi')
+        self.so_menu.add_radiobutton(
+            label='pmidi',
+            value='pmidi',
+            variable=self.so_midi_executable)
+        self.so_menu.add_radiobutton(
+            label='jpmidi',
+            value='jpmidi',
+            variable=self.so_midi_executable)
+        self.so_await_jack = tk.IntVar()
+        self.so_await_jack.set(False)
+        self.so_menu.add_checkbutton(
+            label='-- await jack_transport',
+            variable=self.so_await_jack)
+        self.so_menu.add_separator()
         self.so_menu.add_command(
             label='Add',
             command=lambda: asyncio.ensure_future(
@@ -261,6 +285,9 @@ class SongMixin:
     def save_state(self):
         """Return exercise state."""
         data = {}
+        data['midi_executable'] = self.so_midi_executable.get()
+        data['await_jack'] = self.so_await_jack.get()
+        data['jpmidi_port'] = self.so_jpmidi_port
         for i in range(len(self.so_tabs)):
             tab_name = self.so_notebook.tab(i)['text']
             data[tab_name] = {}
@@ -274,6 +301,12 @@ class SongMixin:
 
     def restore_state(self, data):
         """Restore saved settings."""
+        if 'midi_executable' in data:
+            self.so_midi_executable.set(data['midi_executable'])
+        if 'await_jack' in data:
+            self.so_await_jack.set(data['await_jack'])
+        if 'jpmidi_port' in data:
+            self.so_jpmidi_port = data['jpmidi_port']
         for i in range(len(self.so_tabs)):
             tab_name = self.so_notebook.tab(i)['text']
             if tab_name not in data:
@@ -487,8 +520,14 @@ class SongMixin:
                 "Still searching for pmidi port, cancelled playback.")
             self.show_messages()
             return
+        if self.so_jpmidi_port is None and self.so_midi_executable.get() == 'jpmidi':
+            await self.select_port(pmidi=False)
         try:
-            self.player = await play_midi(self.port, midi)
+            if self.so_midi_executable.get() == 'pmidi':
+                self.player = await play_midi(self.port, midi)
+            else:
+                self.player = await play_midi(
+                    self.so_jpmidi_port, midi, pmidi=False)
         except Exception as err:
             ErrorDialog(
                 self.root,

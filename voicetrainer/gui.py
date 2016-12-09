@@ -79,17 +79,21 @@ class MainWindow(ExerciseMixin, SongMixin):
                 data="Could not find midi port\n{}".format(str(err)))
             raise
 
-    async def select_port(self):
+    async def select_port(self, pmidi=True):
         """Change port matching."""
         selection_dialog = PortSelection(
             self.root,
-            data=await list_ports(),
-            current_port=self.port_match)
-        self.port_match = await selection_dialog.await_data()
-        if self.port is not None:
-            # not currently searching for port, start
-            self.port = None
-            await self.find_port()
+            data=await list_ports(pmidi=pmidi),
+            current_port=self.port_match if pmidi else self.so_jpmidi_port)
+        if pmidi:
+            self.port_match = await selection_dialog.await_data()
+            if self.port is not None:
+                # not currently searching for port, start
+                self.port = None
+                self.port_label_text.set('pmidi port: None')
+                await self.find_port()
+        else:
+            self.so_jpmidi_port = await selection_dialog.await_data()
 
     def create_widgets(self):
         """Put some stuff up to look at."""
