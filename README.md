@@ -48,6 +48,9 @@ voicetrainer
 * refactor export to be in MainWindow and file menu
 * refactor mixins to use __ instead of ex_ and so_
 * add reset button for songs
+* reset midi after stopping or killing playback
+* phase out midion/off and sheeton/off vars in favor of comments
+* make release and publish
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
