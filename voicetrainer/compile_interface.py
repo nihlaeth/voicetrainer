@@ -62,7 +62,8 @@ class Interface:
             velocity = "velocity{}".format(
                 self.velocity if not compiling else 0)
             instruments = "-{}".format('-'.join(
-                [instrument for instrument in self.instruments])) if \
+                [instrument for instrument in self.instruments if \
+                    self.instruments[instrument]])) if \
                     self.has_instruments else ""
             return self.data_path.joinpath(
                 "{}-{}bpm-{}-{}{}{}.midi".format(
