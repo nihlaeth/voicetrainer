@@ -461,6 +461,12 @@ class SongMixin:
             for i in range(len(self.__tabs)):
                 await SongMixin.update_sheet(self, tab_num=i)
         else:
+            to_delete = []
+            for path in self.image_cache:
+                if not Path(path).exists():
+                    to_delete.append(path)
+            for path in to_delete:
+                del self.image_cache[path]
             await SongMixin.update_sheet(self, tab_num=tab_num)
 
     def change_page(self, increment=True, page=None, scroll=False):
