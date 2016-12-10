@@ -179,6 +179,10 @@ class ExerciseMixin:
                 ExerciseMixin.resize_sheet(self, e, num)))
         self.__tabs[tab_num]['sheet'] = sheet
         sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W+tk.S+tk.E)
+
+        sheet.bind(
+            "<Button-1>",
+            lambda e: ExerciseMixin.set_repeat_once(self))
         asyncio.ensure_future(
             ExerciseMixin.update_sheet(self, tab_num=tab_num))
 
