@@ -43,13 +43,16 @@ voicetrainer
 ## Todo
 * tweak pmidi settings (shorter sleep after midi end)
 * document song feature and lily comment settings
+* document jpmidi and jack transport use
 * refactor export to be in MainWindow and file menu
 * add reset button for songs
 * reset midi after stopping or killing playback
 * make release and publish
 
 ## Problems
+* song and exercise definitions are not valid lily code, making syntax checking harder
 
 ## Planned features
 * add command line script to compile / edit midi
 * compile exercise before it's started
+* midi mixer settings
