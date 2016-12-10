@@ -54,6 +54,9 @@ class ExerciseMixin:
         tab_num = len(self.__tabs) - 1
         self.__tabs[tab_num]['tab'] = tab
 
+        config = Exercise(
+            self.__data_path, self.include_path, exercise).config
+
         # bpm selector
         bpm_label = ttk.Label(tab, text="bpm:")
         self.__tabs[tab_num]['bpm_label'] = bpm_label
@@ -68,6 +71,8 @@ class ExerciseMixin:
             resolution=10,
             orient=tk.HORIZONTAL)
         bpm.set(140)
+        if 'tempo' not in config:
+            bpm.state(('disabled',))
         self.__tabs[tab_num]['bpm'] = bpm
         bpm.grid(column=3, row=0, sticky=tk.W+tk.N)
 
@@ -117,11 +122,12 @@ class ExerciseMixin:
             *self.__sound_list,
             command=lambda _: asyncio.ensure_future(
                 ExerciseMixin.update_sheet(self)))
+        if 'sound' not in config:
+            sound.state(('disabled',))
         self.__tabs[tab_num]['sound_menu'] = sound
         sound.grid(column=2, row=0, sticky=tk.W+tk.N)
 
         textvar = tk.StringVar()
-        textvar.set(self.__pitch_list[listbox.curselection()[0]])
         self.__tabs[tab_num]['curr_pitch'] = textvar
         curr_pitch = tk.OptionMenu(
             frame,
@@ -129,6 +135,11 @@ class ExerciseMixin:
             *self.__pitch_list,
             command=lambda _: asyncio.ensure_future(
                 ExerciseMixin.on_pitch_change(self)))
+        if 'key' in config:
+            textvar.set(config['key'])
+        else:
+            textvar.set('c')
+            curr_pitch.state(('disabled',))
         self.__tabs[tab_num]['pitch_menu'] = curr_pitch
         curr_pitch.grid(column=3, row=0, sticky=tk.W+tk.N)
 

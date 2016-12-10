@@ -55,7 +55,7 @@ class SongMixin:
         self.__tabs[tab_num]['page'] = 1
 
         config = Song(
-            self.__data_path, self.include_path, song).get_config()
+            self.__data_path, self.include_path, song).config
 
         # controls
         frame = ttk.Frame(tab)
@@ -79,6 +79,7 @@ class SongMixin:
             bpm.set(int(config['tempo']))
         else:
             bpm.set(140)
+            bpm.state(('disabled',))
         self.__tabs[tab_num]['bpm'] = bpm
         bpm.grid(column=1, row=0, sticky=tk.W+tk.N)
 
@@ -86,10 +87,6 @@ class SongMixin:
         self.__tabs[tab_num]['key_label'] = key_label
         key_label.grid(column=0, row=1, sticky=tk.N+tk.E)
         textvar = tk.StringVar()
-        if 'key' in config:
-            textvar.set(config['key'])
-        else:
-            textvar.set('c')
         self.__tabs[tab_num]['curr_pitch'] = textvar
         curr_pitch = tk.OptionMenu(
             frame,
@@ -97,13 +94,20 @@ class SongMixin:
             *self.__pitch_list,
             command=lambda _: asyncio.ensure_future(
                 SongMixin.on_pitch_change(self)))
+        if 'key' in config:
+            textvar.set(config['key'])
+        else:
+            textvar.set('c')
+            curr_pitch.state(('disabled',))
         self.__tabs[tab_num]['pitch_menu'] = curr_pitch
         curr_pitch.grid(column=1, row=1, sticky=tk.W+tk.N)
 
         if 'measures' in config:
             max_measure = int(config['measures'])
+            no_measures = False
         else:
             max_measure = 1
+            no_measures = True
         measure = tk.Spinbox(
             frame,
             width=3,
@@ -115,6 +119,8 @@ class SongMixin:
         measure_label.grid(column=0, row=2, sticky=tk.N+tk.E)
         self.__tabs[tab_num]['curr_measure'] = measure
         measure.grid(column=1, row=2, sticky=tk.W+tk.N)
+        if no_measures:
+            measure.state(('disabled',))
 
         velocity = tk.Spinbox(
             frame,
@@ -143,6 +149,13 @@ class SongMixin:
             self.__tabs[tab_num]['instruments'][instrument] = intvar
             self.__tabs[tab_num]['icheckboxes'].append(checkbox)
 
+        if 'pages' in config:
+            num_pages = int(config['pages'])
+            no_pages = False
+        else:
+            num_pages = 1
+            no_pages = True
+
         first_page = ttk.Button(
             frame,
             text='First page',
@@ -164,10 +177,6 @@ class SongMixin:
         self.__tabs[tab_num]['prev_page'] = prev_page
         prev_page.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
-        if 'pages' in config:
-            num_pages = int(config['pages'])
-        else:
-            num_pages = 1
         last_page = ttk.Button(
             frame,
             text='Last page',
@@ -175,6 +184,12 @@ class SongMixin:
                 self, page=last))
         self.__tabs[tab_num]['last_page'] = last_page
         last_page.grid(column=0, row=8, columnspan=2, sticky=tk.W+tk.N+tk.E)
+
+        if no_pages:
+            first_page.state(('disabled',))
+            next_page.state(('disabled',))
+            prev_page.state(('disabled',))
+            last_page.state(('disabled',))
 
         play_stop = tk.StringVar()
         play_stop.set("play")

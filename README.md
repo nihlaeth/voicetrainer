@@ -8,17 +8,6 @@ So I started thinking about a solution. What I want from this is an exercise tha
 
 It says something about me that I'd rather dictate code one letter at a time for four days straight than click pause and play a few times in a big MIDI file, but here it is, so you won't have to repeat the feat. Enjoy!
 
-## Exercise definitions
-Exercises are defined in the ~/.voicetrainer/exercises folder. They are written in LilyPond, though with a little customization of my own. Namely, they accept variables to make it easy to change the exercise without having to write hundreds of exercise definitions for all the possibilities.
-
-The parameters are:
-* ${pitch} - pitch with octave attached (ex: c', usage: \transpose c ${pitch} { c e g | })
-* ${pitch_noheight} - just the pitch, for use in chordmode (ex: c, usage: \chordmode { ${pitch_noheight}:m })
-* ${sound} - vocal, for use in lyricsmode (ex: Mi, usage: \lyricsmode { ${sound} })
-* ${tempo} - bpm, for midi tempo (ex: 140, usage: \tempo ${temp}=4)
-
-These parameters are not optional, though you might ignore a few by placing them in a comment.
-
 ## Examples
 See https://github.com/nihlaeth/voicetrainerdata for exercise and song examples.
 
@@ -42,7 +31,7 @@ voicetrainer
 
 ## Todo
 * tweak pmidi settings (shorter sleep after midi end)
-* document song feature and lily comment settings
+* document song feature and lily settings
 * document jpmidi and jack transport use
 * refactor export to be in MainWindow and file menu
 * add reset button for songs
@@ -50,11 +39,8 @@ voicetrainer
 * make release and publish
 * have scroll wheel scroll scrollbars
 * add recompile button to songs to save time when editing
-* correctly set current pitch in restore_state
-* disable interface elements if lily code does not provide variable
 
 ## Problems
-* song and exercise definitions are not valid lily code, making syntax checking harder
 * jpmidi transport does not reset to 0
 * clear cache does not clear second sheet page
 

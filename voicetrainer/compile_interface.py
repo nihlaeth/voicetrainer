@@ -2,7 +2,6 @@
 from pathlib import Path
 from enum import Enum
 from typing import List
-from string import Template
 import re
 
 def tokenize(text):
@@ -22,8 +21,6 @@ class Interface:
 
     """Filenames and compile flags for exercises."""
 
-    has_pages = False
-    has_sound = False
     has_start_measure = False
     has_instruments = False
 
@@ -50,45 +47,41 @@ class Interface:
         self.start_measure = start_measure
         self.velocity = velocity
         self.instruments = {} if instruments is None else instruments
+        self.config = self.get_config()
 
     def get_filename(self, file_type: FileType, compiling: bool=False):
         """Return full path."""
-        if file_type == FileType.lily:
-            return self.data_path.joinpath("{}.ly".format(self.name))
+        naming_elements = [self.name]
+        extension = "ly"
         if file_type == FileType.midi:
-            measure = "-from-measure-{}".format(
-                self.start_measure if not compiling else 1) if \
-                    self.has_start_measure else ""
-            velocity = "velocity{}".format(
-                self.velocity if not compiling else 0)
-            instruments = "-{}".format('-'.join(
-                [instrument for instrument in self.instruments if \
-                    self.instruments[instrument]])) if \
-                    self.has_instruments else ""
-            return self.data_path.joinpath(
-                "{}-{}bpm-{}-{}{}{}.midi".format(
-                    self.name,
-                    self.bpm,
-                    self.pitch,
-                    velocity,
-                    instruments,
-                    measure))
+            extension = "midi"
+            naming_elements.append("{}bpm".format(self.bpm))
+            naming_elements.append("{}".format(self.pitch))
+            naming_elements.append("velocity{}".format(
+                self.velocity if not compiling else 0))
+            if self.has_instruments:
+                naming_elements.append('-'.join(
+                    [instrument for instrument in self.instruments if \
+                    self.instruments[instrument]]))
+            if self.has_start_measure:
+                naming_elements.append("from-measure-{}".format(
+                    self.start_measure if not compiling else 1))
         if file_type == FileType.png:
-            sound = "-{}".format(self.sound) if self.has_sound else ""
-            config = self.get_config()
-            if 'pages' in config:
-                num_pages = int(config['pages'])
-            else:
-                num_pages = 1
-            page = "-page{}".format(
-                self.page) if self.has_pages and num_pages > 1 and \
-                    not compiling else ""
-            return self.data_path.joinpath("{}-{}{}{}.png".format(
-                self.name, self.pitch, sound, page))
+            extension = "png"
+            naming_elements.append("{}".format(self.pitch))
+            if 'sound' in self.config:
+                naming_elements.append("{}".format(self.sound))
+            if 'pages' in self.config and not compiling:
+                num_pages = int(self.config['pages'])
+                if num_pages > 1:
+                    naming_elements.append("page{}".format(self.page))
         if file_type == FileType.pdf:
-            sound = "-{}".format(self.sound) if self.has_sound else ""
-            return self.data_path.joinpath("{}-{}{}.pdf".format(
-                self.name, self.pitch, sound))
+            extension = "pdf"
+            naming_elements.append("{}".format(self.pitch))
+            if 'sound' in self.config:
+                naming_elements.append("{}".format(self.sound))
+        return self.data_path.joinpath("{}.{}".format(
+            '-'.join(naming_elements), extension))
 
     def get_lilypond_options(self, file_type: FileType) -> List[str]:
         """Return list of lilypond cli options to compile file_type."""
@@ -117,22 +110,27 @@ class Interface:
 
     def get_final_lily_code(self, file_type: FileType) -> str:
         """Lily code with substitutions made."""
-        lily_code = Template(self.get_raw_lily_code())
-        if self.has_sound:
-            s_lily_code = lily_code.safe_substitute(
-                tempo=self.bpm,
-                pitch=self.pitch,
-                pitch_noheight=self.pitch[0],
-                sound=self.sound)
-        else:
-            s_lily_code = lily_code.safe_substitute(
-                tempo=self.bpm,
-                pitch=self.pitch,
-                pitch_noheight=self.pitch[0])
+        lily_code = self.get_raw_lily_code()
         ignore_count = 0
         keep_data = []
-        for line in s_lily_code.split('\n'):
+        for line in lily_code.split('\n'):
             tokens = tokenize(line)
+            if len(tokens) > 2 and \
+                    tokens[0].startswith('voicetrainer') and \
+                    tokens[1] == '=':
+                if tokens[0] == 'voicetrainerTempo':
+                    keep_data.append(
+                        "voicetrainerTempo = {}".format(self.bpm))
+                elif tokens[0] == 'voicetrainerKey':
+                    keep_data.append(
+                        "voicetrainerKey = {}".format(self.pitch))
+                elif tokens[0] == 'voicetrainerKeyNoOctave':
+                    keep_data.append(
+                        "voicetrainerKeyNoOctave = {}".format(self.pitch[0]))
+                elif tokens[0] == 'voicetrainerSound':
+                    keep_data.append(
+                        "voicetrainerSound = \"{}\"".format(self.sound))
+                continue
 
             if (file_type == FileType.png or file_type == FileType.pdf) and \
                     len(tokens) > 2 and \
@@ -144,7 +142,8 @@ class Interface:
                     tokens[0] == '%' and \
                     tokens[1] == 'sheetonly':
                 ignore_count += 1 if tokens[2] == 'start' else -1
-            if self.has_instruments and len(tokens) > 3 and \
+            if file_type == FileType.midi and \
+                    self.has_instruments and len(tokens) > 3 and \
                     tokens[0] == '%' and \
                     tokens[1] == 'instrument':
                 if not self.instruments[tokens[3]]:
@@ -175,26 +174,24 @@ class Interface:
                     tokens[2] == 'start':
                 if tokens[3] not in data['instruments']:
                     data['instruments'].append(tokens[3])
-            # extract key
-            if '\\transpose' in tokens:
-                index_transpose = tokens.index('\\transpose')
-                if 'key' not in data and len(tokens) > index_transpose + 1:
-                    data['key'] = tokens[index_transpose + 1]
+            if len(tokens) > 2 and \
+                    tokens[0].startswith('voicetrainer') and \
+                    tokens[1] == '=':
+                if tokens[0] == 'voicetrainerTempo':
+                    data['tempo'] = tokens[2]
+                elif tokens[0] == 'voicetrainerKey':
+                    data['key'] = tokens[2]
+                elif tokens[0] == 'voicetrainerSound':
+                    data['sound'] = tokens[2]
         return data
 
 class Exercise(Interface):
 
     """Exercise interface."""
 
-    has_pages = False
-    has_sound = True
-    has_start_measure = False
-
 class Song(Interface):
 
     """Song interface."""
 
-    has_pages = True
-    has_sound = False
     has_start_measure = True
     has_instruments = True
