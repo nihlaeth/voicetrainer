@@ -48,7 +48,6 @@ voicetrainer
 * reset midi after stopping or killing playback
 * make release and publish
 * report errors from play module in ui
-* don't call terminate on jpmidi proc
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing

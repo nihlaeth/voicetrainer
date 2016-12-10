@@ -132,8 +132,6 @@ async def stop_midi(proc: Process) -> None:
         await _write_stdin(proc.stdin, 'exit')
         # consume any last output
         await proc.stdout.read()
-        if proc.returncode is None:
-            proc.terminate()
 
 async def exec_on_midi_end(proc: Process, func: Callable) -> int:
     """Exec func when midi stops playing."""
