@@ -105,6 +105,9 @@ class MainWindow(ExerciseMixin, SongMixin):
         self.top.rowconfigure(0, weight=1)
         self.top.columnconfigure(0, weight=1)
         self.top.title("VoiceTrainer")
+        self.top.protocol(
+            "WM_DELETE_WINDOW",
+            lambda: asyncio.ensure_future(self.quit()))
 
         # self.top menu
         self.menubar = tk.Menu(self.top)
@@ -183,6 +186,8 @@ class MainWindow(ExerciseMixin, SongMixin):
                     "task will be aborted."))
             if not await confirm_exit.await_data():
                 return
+        if self.player is not None:
+            await self.stop()
         self.close()
 
     def close(self):

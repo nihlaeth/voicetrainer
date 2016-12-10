@@ -17,7 +17,6 @@ class Root(tk.Tk):
         super().__init__()
         self.loop = loop
         self.windows = []
-        self.protocol("WM_DELETE_WINDOW", self.close)
         self.updater(interval)
 
     def updater(self, interval):
@@ -55,6 +54,7 @@ class Dialog:
         self.return_event = asyncio.Event()
         self.on_close = on_close
         self.top = tk.Toplevel(self.root)
+        self.top.protocol("WM_DELETE_WINDOW", self.close)
         self.visibility = asyncio.Event()
         self.top.bind('<Visibility>', lambda _=None: self.visibility.set())
         self.frame = tk.Frame(self.top)
