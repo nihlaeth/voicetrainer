@@ -527,7 +527,10 @@ class SongMixin:
                 self.player = await play_midi(self.port, midi)
             else:
                 self.player = await play_midi(
-                    self.__jpmidi_port, midi, pmidi=False)
+                    self.__jpmidi_port,
+                    midi,
+                    pmidi=False,
+                    error_cb=self.new_message)
         except Exception as err:
             ErrorDialog(
                 self.root,

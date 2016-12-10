@@ -82,7 +82,11 @@ class PortFinder:
 
 async def _read_stderr(stderr, err_cb):
     while not stderr.at_eof():
-        err_cb(bytes.decode(await stderr.readline()))
+        err = bytes.decode(await stderr.readline())
+        if 'jpmidi:out is not connected to anything!' not in err and \
+                'jack_client_new: deprecated' not in err and \
+                err != '\n' and len(err) > 0:
+            err_cb(err)
 
 async def _read_stdout(stdout):
     return bytes.decode(await stdout.readuntil(str.encode('jpmidi> ')))

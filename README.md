@@ -47,10 +47,10 @@ voicetrainer
 * add reset button for songs
 * reset midi after stopping or killing playback
 * make release and publish
-* report errors from play module in ui
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing
 
 ## Planned features
+* add command line script to compile / edit midi
 * compile exercise before it's started

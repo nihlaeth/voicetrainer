@@ -221,6 +221,11 @@ class MainWindow(ExerciseMixin, SongMixin):
             if self.msg_window is not None:
                 self.msg_window.update_data(self.messages)
 
+    def new_message(self, msg):
+        """There's a new message to report."""
+        self.messages.append(msg)
+        self.show_messages()
+
     def display_messages(self, _=None):
         """Display all messages."""
         if self.msg_window is None:
