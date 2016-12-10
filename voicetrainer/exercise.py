@@ -29,34 +29,34 @@ class ExerciseMixin:
 
     This is a mixin class. If you need a method from here, call it
     specifically. To avoid naming collisions, start all properties
-    with ex_. All properties that do not start with ex_, are assumed to be
+    with __. All properties that do not start with ex_, are assumed to be
     provided the class that this is mixed in.
     """
 
     def __init__(self):
-        self.ex_data_path = self.data_path.joinpath('exercises')
-        self.ex_data_path.mkdir(exist_ok=True)
-        self.ex_pitch_list = [note + octave for octave, note in product(
+        self.__data_path = self.data_path.joinpath('exercises')
+        self.__data_path.mkdir(exist_ok=True)
+        self.__pitch_list = [note + octave for octave, note in product(
             [',', '', '\''],
             list("cdefgab"))]
-        self.ex_sound_list = ["Mi", "Na", "Noe", "Nu", "No"]
-        self.ex_tabs = []
+        self.__sound_list = ["Mi", "Na", "Noe", "Nu", "No"]
+        self.__tabs = []
 
         ExerciseMixin.create_widgets(self)
 
     def create_tab(self, exercise: str) -> None:
         """Populate exercise tab."""
-        tab = ttk.Frame(self.ex_notebook)
+        tab = ttk.Frame(self.__notebook)
         tab.rowconfigure(1, weight=1)
         tab.columnconfigure(3, weight=1)
-        self.ex_notebook.add(tab, text=exercise)
-        self.ex_tabs.append({})
-        tab_num = len(self.ex_tabs) - 1
-        self.ex_tabs[tab_num]['tab'] = tab
+        self.__notebook.add(tab, text=exercise)
+        self.__tabs.append({})
+        tab_num = len(self.__tabs) - 1
+        self.__tabs[tab_num]['tab'] = tab
 
         # bpm selector
         bpm_label = ttk.Label(tab, text="bpm:")
-        self.ex_tabs[tab_num]['bpm_label'] = bpm_label
+        self.__tabs[tab_num]['bpm_label'] = bpm_label
         bpm_label.grid(column=2, row=0, sticky=tk.N+tk.W)
         bpm = tk.Scale(
             tab,
@@ -68,12 +68,12 @@ class ExerciseMixin:
             resolution=10,
             orient=tk.HORIZONTAL)
         bpm.set(140)
-        self.ex_tabs[tab_num]['bpm'] = bpm
+        self.__tabs[tab_num]['bpm'] = bpm
         bpm.grid(column=3, row=0, sticky=tk.W+tk.N)
 
         # pitch selector
         scrollbar = tk.Scrollbar(tab, orient=tk.VERTICAL)
-        self.ex_tabs[tab_num]['pitch_scrollbar'] = scrollbar
+        self.__tabs[tab_num]['pitch_scrollbar'] = scrollbar
         scrollbar.grid(row=1, column=0, sticky=tk.N+tk.S+tk.W)
 
         listbox = tk.Listbox(
@@ -83,16 +83,16 @@ class ExerciseMixin:
             # make selections in multiple listboxes possible
             exportselection=False,
             selectmode=tk.MULTIPLE)
-        self.ex_tabs[tab_num]['pitches'] = listbox
+        self.__tabs[tab_num]['pitches'] = listbox
         listbox.grid(row=1, column=1, sticky=tk.N+tk.S+tk.W)
         scrollbar['command'] = listbox.yview
 
-        listbox.insert(0, *self.ex_pitch_list)
+        listbox.insert(0, *self.__pitch_list)
         listbox.selection_set(7, 14)
 
         # controls
         frame = ttk.Frame(tab)
-        self.ex_tabs[tab_num]['control_frame'] = frame
+        self.__tabs[tab_num]['control_frame'] = frame
         frame.grid(column=2, row=2, columnspan=2, sticky=tk.W+tk.N)
         # sound pitch random autonext repeat_once next play/stop
 
@@ -103,53 +103,53 @@ class ExerciseMixin:
             to=50,
             increment=1)
         velocity_label = ttk.Label(frame, text="relative velocity:")
-        self.ex_tabs[tab_num]['velocity_label'] = velocity_label
+        self.__tabs[tab_num]['velocity_label'] = velocity_label
         velocity_label.grid(column=0, row=0, sticky=tk.N+tk.E)
-        self.ex_tabs[tab_num]['velocity'] = velocity
+        self.__tabs[tab_num]['velocity'] = velocity
         velocity.grid(column=1, row=0, sticky=tk.W+tk.N)
 
         soundvar = tk.StringVar()
         soundvar.set("Mi")
-        self.ex_tabs[tab_num]['sound'] = soundvar
+        self.__tabs[tab_num]['sound'] = soundvar
         sound = tk.OptionMenu(
             frame,
             soundvar,
-            *self.ex_sound_list,
+            *self.__sound_list,
             command=lambda _: asyncio.ensure_future(
                 ExerciseMixin.update_sheet(self)))
-        self.ex_tabs[tab_num]['sound_menu'] = sound
+        self.__tabs[tab_num]['sound_menu'] = sound
         sound.grid(column=2, row=0, sticky=tk.W+tk.N)
 
         textvar = tk.StringVar()
-        textvar.set(self.ex_pitch_list[listbox.curselection()[0]])
-        self.ex_tabs[tab_num]['curr_pitch'] = textvar
+        textvar.set(self.__pitch_list[listbox.curselection()[0]])
+        self.__tabs[tab_num]['curr_pitch'] = textvar
         curr_pitch = tk.OptionMenu(
             frame,
             textvar,
-            *self.ex_pitch_list,
+            *self.__pitch_list,
             command=lambda _: asyncio.ensure_future(
                 ExerciseMixin.on_pitch_change(self)))
-        self.ex_tabs[tab_num]['pitch_menu'] = curr_pitch
+        self.__tabs[tab_num]['pitch_menu'] = curr_pitch
         curr_pitch.grid(column=3, row=0, sticky=tk.W+tk.N)
 
         rand_int = tk.IntVar()
-        self.ex_tabs[tab_num]['random'] = rand_int
+        self.__tabs[tab_num]['random'] = rand_int
         random = ttk.Checkbutton(frame, text="random", variable=rand_int)
-        self.ex_tabs[tab_num]['random_box'] = random
+        self.__tabs[tab_num]['random_box'] = random
         random.grid(column=4, row=0, sticky=tk.W+tk.N)
 
         auto_int = tk.IntVar()
-        self.ex_tabs[tab_num]['autonext'] = auto_int
+        self.__tabs[tab_num]['autonext'] = auto_int
         autonext = ttk.Checkbutton(
             frame, text="autonext", variable=auto_int)
-        self.ex_tabs[tab_num]['autonext_box'] = autonext
+        self.__tabs[tab_num]['autonext_box'] = autonext
         autonext.grid(column=5, row=0, sticky=tk.W+tk.N)
 
         repeat = ttk.Button(
             frame,
             text="repeat once",
             command=lambda: ExerciseMixin.set_repeat_once(self))
-        self.ex_tabs[tab_num]['repeat'] = repeat
+        self.__tabs[tab_num]['repeat'] = repeat
         repeat.grid(column=6, row=0, sticky=tk.W+tk.N)
 
         next_ = ttk.Button(
@@ -157,18 +157,18 @@ class ExerciseMixin:
             text="next",
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.next_(self)))
-        self.ex_tabs[tab_num]['next_'] = next_
+        self.__tabs[tab_num]['next_'] = next_
         next_.grid(column=7, row=0, sticky=tk.W+tk.N)
 
         play_stop = tk.StringVar()
         play_stop.set("play")
-        self.ex_tabs[tab_num]['play_stop'] = play_stop
+        self.__tabs[tab_num]['play_stop'] = play_stop
         play = ttk.Button(
             frame,
             textvariable=play_stop,
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.play_or_stop(self)))
-        self.ex_tabs[tab_num]['play'] = play
+        self.__tabs[tab_num]['play'] = play
         play.grid(column=8, row=0, sticky=tk.W+tk.N)
 
         # sheet display
@@ -177,97 +177,97 @@ class ExerciseMixin:
             "<Configure>",
             lambda e, num=tab_num: asyncio.ensure_future(
                 ExerciseMixin.resize_sheet(self, e, num)))
-        self.ex_tabs[tab_num]['sheet'] = sheet
+        self.__tabs[tab_num]['sheet'] = sheet
         sheet.grid(column=2, row=1, columnspan=2, sticky=tk.N+tk.W+tk.S+tk.E)
         asyncio.ensure_future(
             ExerciseMixin.update_sheet(self, tab_num=tab_num))
 
     def create_widgets(self):
         """Put some stuff up to look at."""
-        self.ex_menu = tk.Menu(self.menubar)
-        self.menubar.add_cascade(label='Exercises', menu=self.ex_menu)
-        self.ex_menu.add_command(
+        self.__menu = tk.Menu(self.menubar)
+        self.menubar.add_cascade(label='Exercises', menu=self.__menu)
+        self.__menu.add_command(
             label='Add',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.add_exercise(self)))
-        self.ex_menu.add_command(
+        self.__menu.add_command(
             label='Delete',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.remove_exercise(self)))
-        self.ex_menu.add_command(
+        self.__menu.add_command(
             label='Export midi',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.export(self, FileType.midi)))
-        self.ex_menu.add_command(
+        self.__menu.add_command(
             label='Export png',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.export(self, FileType.png)))
-        self.ex_menu.add_command(
+        self.__menu.add_command(
             label='Export pdf',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.export(self, FileType.pdf)))
-        self.ex_menu.add_command(
+        self.__menu.add_command(
             label='Export lilypond',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.export(self, FileType.lily)))
-        self.ex_menu.add_command(
+        self.__menu.add_command(
             label='Precompile',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.recompile(self)))
 
-        self.ex_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.ex_frame, text='Exercises')
-        self.ex_frame.rowconfigure(0, weight=1)
-        self.ex_frame.columnconfigure(0, weight=1)
+        self.__frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.__frame, text='Exercises')
+        self.__frame.rowconfigure(0, weight=1)
+        self.__frame.columnconfigure(0, weight=1)
 
-        self.ex_notebook = ttk.Notebook(self.ex_frame)
-        for exercise in self.ex_data_path.glob('*.ly'):
+        self.__notebook = ttk.Notebook(self.__frame)
+        for exercise in self.__data_path.glob('*.ly'):
             ExerciseMixin.create_tab(self, exercise.stem)
-        self.ex_notebook.grid(
+        self.__notebook.grid(
             column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
-        self.ex_notebook.rowconfigure(0, weight=1)
-        self.ex_notebook.columnconfigure(0, weight=1)
+        self.__notebook.rowconfigure(0, weight=1)
+        self.__notebook.columnconfigure(0, weight=1)
 
     @property
-    def ex_num(self):
+    def __num(self):
         """Return index of current tab."""
-        tab_id = self.ex_notebook.select()
-        return self.ex_notebook.index(tab_id)
+        tab_id = self.__notebook.select()
+        return self.__notebook.index(tab_id)
 
     def save_state(self):
         """Return exercise state."""
         data = {}
-        for i in range(len(self.ex_tabs)):
-            tab_name = self.ex_notebook.tab(i)['text']
+        for i in range(len(self.__tabs)):
+            tab_name = self.__notebook.tab(i)['text']
             data[tab_name] = {}
-            data[tab_name]['pitch_selection'] = self.ex_tabs[i]['pitches'].curselection()
-            data[tab_name]['bpm'] = self.ex_tabs[i]['bpm'].get()
-            data[tab_name]['sound'] = self.ex_tabs[i]['sound'].get()
-            data[tab_name]['autonext'] = self.ex_tabs[i]['autonext'].get()
-            data[tab_name]['random'] = self.ex_tabs[i]['random'].get()
+            data[tab_name]['pitch_selection'] = self.__tabs[i]['pitches'].curselection()
+            data[tab_name]['bpm'] = self.__tabs[i]['bpm'].get()
+            data[tab_name]['sound'] = self.__tabs[i]['sound'].get()
+            data[tab_name]['autonext'] = self.__tabs[i]['autonext'].get()
+            data[tab_name]['random'] = self.__tabs[i]['random'].get()
         return data
 
     def restore_state(self, data):
         """Restore saved settings."""
-        for i in range(len(self.ex_tabs)):
-            tab_name = self.ex_notebook.tab(i)['text']
+        for i in range(len(self.__tabs)):
+            tab_name = self.__notebook.tab(i)['text']
             if tab_name not in data:
                 continue
-            self.ex_tabs[i]['pitches'].selection_clear(
-                0, len(self.ex_pitch_list) - 1)
+            self.__tabs[i]['pitches'].selection_clear(
+                0, len(self.__pitch_list) - 1)
             for p_index in data[tab_name]['pitch_selection']:
-                self.ex_tabs[i]['pitches'].selection_set(p_index)
-            self.ex_tabs[i]['bpm'].set(data[tab_name]['bpm'])
-            self.ex_tabs[i]['sound'].set(data[tab_name]['sound'])
-            self.ex_tabs[i]['autonext'].set(
+                self.__tabs[i]['pitches'].selection_set(p_index)
+            self.__tabs[i]['bpm'].set(data[tab_name]['bpm'])
+            self.__tabs[i]['sound'].set(data[tab_name]['sound'])
+            self.__tabs[i]['autonext'].set(
                 data[tab_name]['autonext'])
-            self.ex_tabs[i]['random'].set(data[tab_name]['random'])
+            self.__tabs[i]['random'].set(data[tab_name]['random'])
 
     async def recompile(self):
         """Recompile all exercises."""
         self.compiler_count += 1
         self.update_compiler()
-        log = await compile_all(self.ex_data_path, self.include_path)
+        log = await compile_all(self.__data_path, self.include_path)
         for output, err in [
                 log_tuple for log_item in log for log_tuple in log_item]:
             if len(output) > 0:
@@ -278,32 +278,32 @@ class ExerciseMixin:
         self.update_compiler()
         self.show_messages()
         self.image_cache = {}
-        for i in range(len(self.ex_tabs)):
-            await self.ex_update_sheet(tab_num=i)
+        for i in range(len(self.__tabs)):
+            await self.__update_sheet(tab_num=i)
 
         # remove files
         for file_ in chain(
-                self.ex_data_path.glob("*.midi"),
-                self.ex_data_path.glob("*.png"),
-                self.ex_data_path.glob("*.pdf")):
+                self.__data_path.glob("*.midi"),
+                self.__data_path.glob("*.png"),
+                self.__data_path.glob("*.pdf")):
             file_.unlink()
 
         # clear image_cache and display new sheets
         self.image_cache = {}
-        for i in range(len(self.ex_tabs)):
+        for i in range(len(self.__tabs)):
             await ExerciseMixin.update_sheet(self, tab_num=i)
 
     def get_ex_interface(self, tab_num=None):
         """Return exercise interface."""
         if tab_num is None:
-            tab_num = self.ex_num
-        tab_name = self.ex_notebook.tab(tab_num)['text']
-        pitch = self.ex_tabs[tab_num]['curr_pitch'].get()
-        bpm = int(self.ex_tabs[tab_num]['bpm'].get())
-        sound = self.ex_tabs[tab_num]['sound'].get()
-        velocity = int(self.ex_tabs[tab_num]['velocity'].get())
+            tab_num = self.__num
+        tab_name = self.__notebook.tab(tab_num)['text']
+        pitch = self.__tabs[tab_num]['curr_pitch'].get()
+        bpm = int(self.__tabs[tab_num]['bpm'].get())
+        sound = self.__tabs[tab_num]['sound'].get()
+        velocity = int(self.__tabs[tab_num]['velocity'].get())
         return Exercise(
-            self.ex_data_path,
+            self.__data_path,
             self.include_path,
             name=tab_name,
             pitch=pitch,
@@ -353,7 +353,7 @@ class ExerciseMixin:
                     data="{} is not a file".format(path))
                 return
             content = path.read_text()
-            new_file = self.ex_data_path.joinpath("{}.ly".format(ex_name))
+            new_file = self.__data_path.joinpath("{}.ly".format(ex_name))
             if new_file.is_file():
                 ErrorDialog(
                     self.root,
@@ -366,8 +366,8 @@ class ExerciseMixin:
 
     async def remove_exercise(self):
         """Remove exercise."""
-        tab_num = self.ex_num
-        tab_name = self.ex_notebook.tab(tab_num)['text']
+        tab_num = self.__num
+        tab_name = self.__notebook.tab(tab_num)['text']
         confirm = OkCancelDialog(
             self.root,
             data="Are you sure you want to delete {}? This cannot be undone.".format(
@@ -376,11 +376,11 @@ class ExerciseMixin:
             return
         self.stopping = True
         await self.stop()
-        tab = self.ex_tabs[tab_num]['tab']
-        self.ex_notebook.forget(tab)
+        tab = self.__tabs[tab_num]['tab']
+        self.__notebook.forget(tab)
         tab.destroy()
-        del self.ex_tabs[tab_num]
-        file_name = Path(self.ex_data_path).joinpath(
+        del self.__tabs[tab_num]
+        file_name = Path(self.__data_path).joinpath(
             "{}.ly".format(tab_name))
         # pylint: disable=no-member
         # does too!
@@ -390,23 +390,23 @@ class ExerciseMixin:
         """Remove all compiled files."""
         # remove files
         for file_ in chain(
-                self.ex_data_path.glob("*.midi"),
-                self.ex_data_path.glob("*.png"),
-                self.ex_data_path.glob("*.pdf")):
+                self.__data_path.glob("*.midi"),
+                self.__data_path.glob("*.png"),
+                self.__data_path.glob("*.pdf")):
             file_.unlink()
 
         # clear image_cache and display new sheets
-        for i in range(len(self.ex_tabs)):
+        for i in range(len(self.__tabs)):
             await ExerciseMixin.update_sheet(self, tab_num=i)
 
     async def update_sheet(self, tab_num=None):
         """Display relevant sheet."""
         if tab_num is None:
-            tab_num = self.ex_num
+            tab_num = self.__num
         Size = namedtuple('Size', ['width', 'height'])
         size = Size(
-            self.ex_tabs[tab_num]['sheet'].winfo_width(),
-            self.ex_tabs[tab_num]['sheet'].winfo_height())
+            self.__tabs[tab_num]['sheet'].winfo_width(),
+            self.__tabs[tab_num]['sheet'].winfo_height())
         await ExerciseMixin.resize_sheet(self, size, tab_num)
 
     async def resize_sheet(self, event, tab_num):
@@ -415,8 +415,8 @@ class ExerciseMixin:
             ExerciseMixin.get_ex_interface(self, tab_num),
             event.width,
             event.height)
-        self.ex_tabs[tab_num]['sheet'].delete("left")
-        self.ex_tabs[tab_num]['sheet'].create_image(
+        self.__tabs[tab_num]['sheet'].delete("left")
+        self.__tabs[tab_num]['sheet'].create_image(
             0,
             0,
             image=self.image_cache[left]['image'],
@@ -438,25 +438,25 @@ class ExerciseMixin:
 
     async def next_(self):
         """Skip to next exercise."""
-        curr_pitch = self.ex_tabs[self.ex_num]['curr_pitch'].get()
-        curr_pos = self.ex_pitch_list.index(curr_pitch)
+        curr_pitch = self.__tabs[self.__num]['curr_pitch'].get()
+        curr_pos = self.__pitch_list.index(curr_pitch)
         pitch_pos = curr_pos
-        pitch_selection = self.ex_tabs[self.ex_num]['pitches'].curselection()
+        pitch_selection = self.__tabs[self.__num]['pitches'].curselection()
         if len(pitch_selection) == 0:
             return
-        if self.ex_tabs[self.ex_num]['random'].get() == 1:
+        if self.__tabs[self.__num]['random'].get() == 1:
             while pitch_pos == curr_pos:
                 pitch_pos = choice(pitch_selection)
         elif curr_pos in pitch_selection:
             if pitch_selection.index(curr_pos) >= len(pitch_selection) - 1:
-                curr_sound = self.ex_tabs[self.ex_num]['sound'].get()
-                sound_pos = self.ex_sound_list.index(curr_sound)
-                if sound_pos < len(self.ex_sound_list) - 1:
-                    self.ex_tabs[self.ex_num]['sound'].set(
-                        self.ex_sound_list[sound_pos + 1])
+                curr_sound = self.__tabs[self.__num]['sound'].get()
+                sound_pos = self.__sound_list.index(curr_sound)
+                if sound_pos < len(self.__sound_list) - 1:
+                    self.__tabs[self.__num]['sound'].set(
+                        self.__sound_list[sound_pos + 1])
                 else:
-                    self.ex_tabs[self.ex_num]['sound'].set(
-                        self.ex_sound_list[0])
+                    self.__tabs[self.__num]['sound'].set(
+                        self.__sound_list[0])
                 asyncio.ensure_future(ExerciseMixin.update_sheet(self))
                 pitch_pos = pitch_selection[0]
             else:
@@ -465,10 +465,10 @@ class ExerciseMixin:
         else:
             while pitch_pos not in pitch_selection:
                 pitch_pos += 1
-                if pitch_pos >= len(self.ex_pitch_list):
+                if pitch_pos >= len(self.__pitch_list):
                     pitch_pos = 0
-        self.ex_tabs[self.ex_num]['curr_pitch'].set(
-            self.ex_pitch_list[pitch_pos])
+        self.__tabs[self.__num]['curr_pitch'].set(
+            self.__pitch_list[pitch_pos])
         # I thought tkinter would call this, but apparently not
         await ExerciseMixin.on_pitch_change(self)
 
@@ -498,7 +498,7 @@ class ExerciseMixin:
                 self.root,
                 data="Could not start midi playback\n{}".format(str(err)))
             raise
-        self.ex_tabs[self.ex_num]['play_stop'].set("stop")
+        self.__tabs[self.__num]['play_stop'].set("stop")
         asyncio.ensure_future(exec_on_midi_end(
             self.player,
             partial(ExerciseMixin.on_midi_stop, self)))
@@ -509,10 +509,10 @@ class ExerciseMixin:
         if self.stopping:
             self.play_next = False
             self.stopping = False
-            self.ex_tabs[self.ex_num]['play_stop'].set("play")
+            self.__tabs[self.__num]['play_stop'].set("play")
             return
         if self.play_next or \
-                self.ex_tabs[self.ex_num]['autonext'].get() == 1:
+                self.__tabs[self.__num]['autonext'].get() == 1:
             self.play_next = False
             if not self.repeat_once:
                 await ExerciseMixin.next_(self)
@@ -520,4 +520,4 @@ class ExerciseMixin:
                 self.repeat_once = False
                 await ExerciseMixin.play(self)
             return
-        self.ex_tabs[self.ex_num]['play_stop'].set("play")
+        self.__tabs[self.__num]['play_stop'].set("play")

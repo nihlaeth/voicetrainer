@@ -27,44 +27,44 @@ class SongMixin:
 
     This is a mixin class. If you need a method from here, call it
     specifically. To avoid naming collisions, start all properties
-    with so_. All properties that do not start with so_, are assumed to be
+    with __. All properties that do not start with so_, are assumed to be
     provided the class that this is mixed in.
     """
 
     def __init__(self):
-        self.so_data_path = self.data_path.joinpath('songs')
-        self.so_data_path.mkdir(exist_ok=True)
-        self.so_pitch_list = [note + octave for octave, note in product(
+        self.__data_path = self.data_path.joinpath('songs')
+        self.__data_path.mkdir(exist_ok=True)
+        self.__pitch_list = [note + octave for octave, note in product(
             [',', '', '\''],
             list("cdefgab"))]
-        self.so_tabs = []
-        self.so_scroll_time = datetime.now()
-        self.so_jpmidi_port = 'system:'
+        self.__tabs = []
+        self.__scroll_time = datetime.now()
+        self.__jpmidi_port = 'system:'
 
         SongMixin.create_widgets(self)
 
     def create_tab(self, song: str) -> None:
         """Populate song tab."""
-        tab = ttk.Frame(self.so_notebook)
+        tab = ttk.Frame(self.__notebook)
         tab.rowconfigure(0, weight=1)
         tab.columnconfigure(1, weight=1)
-        self.so_notebook.add(tab, text=song)
-        self.so_tabs.append({})
-        tab_num = len(self.so_tabs) - 1
-        self.so_tabs[tab_num]['tab'] = tab
-        self.so_tabs[tab_num]['page'] = 1
+        self.__notebook.add(tab, text=song)
+        self.__tabs.append({})
+        tab_num = len(self.__tabs) - 1
+        self.__tabs[tab_num]['tab'] = tab
+        self.__tabs[tab_num]['page'] = 1
 
         config = Song(
-            self.so_data_path, self.include_path, song).get_config()
+            self.__data_path, self.include_path, song).get_config()
 
         # controls
         frame = ttk.Frame(tab)
-        self.so_tabs[tab_num]['control_frame'] = frame
+        self.__tabs[tab_num]['control_frame'] = frame
         frame.grid(column=0, row=0, sticky=tk.W+tk.N)
 
         # bpm selector
         bpm_label = ttk.Label(frame, text="bpm:")
-        self.so_tabs[tab_num]['bpm_label'] = bpm_label
+        self.__tabs[tab_num]['bpm_label'] = bpm_label
         bpm_label.grid(column=0, row=0, sticky=tk.N+tk.E)
         bpm = tk.Scale(
             frame,
@@ -79,25 +79,25 @@ class SongMixin:
             bpm.set(int(config['tempo']))
         else:
             bpm.set(140)
-        self.so_tabs[tab_num]['bpm'] = bpm
+        self.__tabs[tab_num]['bpm'] = bpm
         bpm.grid(column=1, row=0, sticky=tk.W+tk.N)
 
         key_label = ttk.Label(frame, text="key:")
-        self.so_tabs[tab_num]['key_label'] = key_label
+        self.__tabs[tab_num]['key_label'] = key_label
         key_label.grid(column=0, row=1, sticky=tk.N+tk.E)
         textvar = tk.StringVar()
         if 'key' in config:
             textvar.set(config['key'])
         else:
             textvar.set('c')
-        self.so_tabs[tab_num]['curr_pitch'] = textvar
+        self.__tabs[tab_num]['curr_pitch'] = textvar
         curr_pitch = tk.OptionMenu(
             frame,
             textvar,
-            *self.so_pitch_list,
+            *self.__pitch_list,
             command=lambda _: asyncio.ensure_future(
                 SongMixin.on_pitch_change(self)))
-        self.so_tabs[tab_num]['pitch_menu'] = curr_pitch
+        self.__tabs[tab_num]['pitch_menu'] = curr_pitch
         curr_pitch.grid(column=1, row=1, sticky=tk.W+tk.N)
 
         if 'measures' in config:
@@ -111,9 +111,9 @@ class SongMixin:
             to=max_measure,
             increment=1)
         measure_label = ttk.Label(frame, text="start from measure:")
-        self.so_tabs[tab_num]['measure_label'] = measure_label
+        self.__tabs[tab_num]['measure_label'] = measure_label
         measure_label.grid(column=0, row=2, sticky=tk.N+tk.E)
-        self.so_tabs[tab_num]['curr_measure'] = measure
+        self.__tabs[tab_num]['curr_measure'] = measure
         measure.grid(column=1, row=2, sticky=tk.W+tk.N)
 
         velocity = tk.Spinbox(
@@ -123,45 +123,45 @@ class SongMixin:
             to=50,
             increment=1)
         velocity_label = ttk.Label(frame, text="relative velocity:")
-        self.so_tabs[tab_num]['velocity_label'] = velocity_label
+        self.__tabs[tab_num]['velocity_label'] = velocity_label
         velocity_label.grid(column=0, row=3, sticky=tk.N+tk.E)
-        self.so_tabs[tab_num]['velocity'] = velocity
+        self.__tabs[tab_num]['velocity'] = velocity
         velocity.grid(column=1, row=3, sticky=tk.W+tk.N)
 
         iframe = ttk.LabelFrame(frame, text="Instruments:")
-        self.so_tabs[tab_num]['iframe'] = iframe
+        self.__tabs[tab_num]['iframe'] = iframe
         iframe.grid(column=0, row=4, columnspan=2, sticky=tk.N+tk.E+tk.W+tk.S)
 
-        self.so_tabs[tab_num]['instruments'] = {}
-        self.so_tabs[tab_num]['icheckboxes'] = []
+        self.__tabs[tab_num]['instruments'] = {}
+        self.__tabs[tab_num]['icheckboxes'] = []
         for i, instrument in enumerate(config['instruments']):
             intvar = tk.IntVar()
             intvar.set(True)
             checkbox = ttk.Checkbutton(
                 iframe, text=instrument, variable=intvar)
             checkbox.grid(column=0, row=i, sticky=tk.N+tk.W)
-            self.so_tabs[tab_num]['instruments'][instrument] = intvar
-            self.so_tabs[tab_num]['icheckboxes'].append(checkbox)
+            self.__tabs[tab_num]['instruments'][instrument] = intvar
+            self.__tabs[tab_num]['icheckboxes'].append(checkbox)
 
         first_page = ttk.Button(
             frame,
             text='First page',
             command=lambda: SongMixin.change_page(self, page=1))
-        self.so_tabs[tab_num]['first_page'] = first_page
+        self.__tabs[tab_num]['first_page'] = first_page
         first_page.grid(column=0, row=5, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         next_page = ttk.Button(
             frame,
             text='Next page',
             command=lambda: SongMixin.change_page(self))
-        self.so_tabs[tab_num]['next_page'] = next_page
+        self.__tabs[tab_num]['next_page'] = next_page
         next_page.grid(column=0, row=6, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         prev_page = ttk.Button(
             frame,
             text='Previous page',
             command=lambda: SongMixin.change_page(self, increment=False))
-        self.so_tabs[tab_num]['prev_page'] = prev_page
+        self.__tabs[tab_num]['prev_page'] = prev_page
         prev_page.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         if 'pages' in config:
@@ -173,18 +173,18 @@ class SongMixin:
             text='Last page',
             command=lambda last=num_pages: SongMixin.change_page(
                 self, page=last))
-        self.so_tabs[tab_num]['last_page'] = last_page
+        self.__tabs[tab_num]['last_page'] = last_page
         last_page.grid(column=0, row=8, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         play_stop = tk.StringVar()
         play_stop.set("play")
-        self.so_tabs[tab_num]['play_stop'] = play_stop
+        self.__tabs[tab_num]['play_stop'] = play_stop
         play = ttk.Button(
             frame,
             textvariable=play_stop,
             command=lambda: asyncio.ensure_future(
                 SongMixin.play_or_stop(self)))
-        self.so_tabs[tab_num]['play'] = play
+        self.__tabs[tab_num]['play'] = play
         play.grid(column=0, row=9, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         # sheet display
@@ -193,7 +193,7 @@ class SongMixin:
             "<Configure>",
             lambda e, num=tab_num: asyncio.ensure_future(
                 SongMixin.resize_sheet(self, e, num)))
-        self.so_tabs[tab_num]['sheet'] = sheet
+        self.__tabs[tab_num]['sheet'] = sheet
         sheet.grid(column=1, row=0, sticky=tk.N+tk.W+tk.S+tk.E)
 
         # sheet mouse events
@@ -213,130 +213,130 @@ class SongMixin:
 
     def create_widgets(self):
         """Put some stuff up to look at."""
-        self.so_menu = tk.Menu(self.menubar)
-        self.menubar.add_cascade(label='Songs', menu=self.so_menu)
-        self.so_menu.add_command(label='Midi', state=tk.DISABLED)
-        self.so_menu.add_command(
+        self.__menu = tk.Menu(self.menubar)
+        self.menubar.add_cascade(label='Songs', menu=self.__menu)
+        self.__menu.add_command(label='Midi', state=tk.DISABLED)
+        self.__menu.add_command(
             label='Select jpmidi port',
             command=lambda: asyncio.ensure_future(
                 self.select_port(pmidi=False)))
-        self.so_menu.add_separator()
-        self.so_menu.add_command(label='Options', state=tk.DISABLED)
-        self.so_midi_executable = tk.StringVar()
-        self.so_midi_executable.set('pmidi')
-        self.so_menu.add_radiobutton(
+        self.__menu.add_separator()
+        self.__menu.add_command(label='Options', state=tk.DISABLED)
+        self.__midi_executable = tk.StringVar()
+        self.__midi_executable.set('pmidi')
+        self.__menu.add_radiobutton(
             label='pmidi',
             value='pmidi',
-            variable=self.so_midi_executable)
-        self.so_menu.add_radiobutton(
+            variable=self.__midi_executable)
+        self.__menu.add_radiobutton(
             label='jpmidi',
             value='jpmidi',
-            variable=self.so_midi_executable)
-        self.so_await_jack = tk.IntVar()
-        self.so_await_jack.set(False)
-        self.so_menu.add_checkbutton(
+            variable=self.__midi_executable)
+        self.__await_jack = tk.IntVar()
+        self.__await_jack.set(False)
+        self.__menu.add_checkbutton(
             label='-- await jack_transport',
-            variable=self.so_await_jack)
-        self.so_menu.add_separator()
-        self.so_menu.add_command(
+            variable=self.__await_jack)
+        self.__menu.add_separator()
+        self.__menu.add_command(
             label='Add',
             command=lambda: asyncio.ensure_future(
                 SongMixin.add_song(self)))
-        self.so_menu.add_command(
+        self.__menu.add_command(
             label='Delete',
             command=lambda: asyncio.ensure_future(
                 SongMixin.remove_song(self)))
-        self.so_menu.add_command(
+        self.__menu.add_command(
             label='Export midi',
             command=lambda: asyncio.ensure_future(
                 SongMixin.export(self, FileType.midi)))
-        self.so_menu.add_command(
+        self.__menu.add_command(
             label='Export png',
             command=lambda: asyncio.ensure_future(
                 SongMixin.export(self, FileType.png)))
-        self.so_menu.add_command(
+        self.__menu.add_command(
             label='Export pdf',
             command=lambda: asyncio.ensure_future(
                 SongMixin.export(self, FileType.pdf)))
-        self.so_menu.add_command(
+        self.__menu.add_command(
             label='Export lilypond',
             command=lambda: asyncio.ensure_future(
                 SongMixin.export(self, FileType.lily)))
 
-        self.so_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.so_frame, text='Songs')
-        self.so_frame.rowconfigure(0, weight=1)
-        self.so_frame.columnconfigure(0, weight=1)
+        self.__frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.__frame, text='Songs')
+        self.__frame.rowconfigure(0, weight=1)
+        self.__frame.columnconfigure(0, weight=1)
 
-        self.so_notebook = ttk.Notebook(self.so_frame)
-        for song in self.so_data_path.glob('*.ly'):
+        self.__notebook = ttk.Notebook(self.__frame)
+        for song in self.__data_path.glob('*.ly'):
             SongMixin.create_tab(self, song.stem)
-        self.so_notebook.grid(
+        self.__notebook.grid(
             column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
-        self.so_notebook.rowconfigure(0, weight=1)
-        self.so_notebook.columnconfigure(0, weight=1)
+        self.__notebook.rowconfigure(0, weight=1)
+        self.__notebook.columnconfigure(0, weight=1)
 
     @property
-    def so_num(self):
+    def __num(self):
         """Return index of current tab."""
-        tab_id = self.so_notebook.select()
-        return self.so_notebook.index(tab_id)
+        tab_id = self.__notebook.select()
+        return self.__notebook.index(tab_id)
 
     def save_state(self):
         """Return exercise state."""
         data = {}
-        data['midi_executable'] = self.so_midi_executable.get()
-        data['await_jack'] = self.so_await_jack.get()
-        data['jpmidi_port'] = self.so_jpmidi_port
-        for i in range(len(self.so_tabs)):
-            tab_name = self.so_notebook.tab(i)['text']
+        data['midi_executable'] = self.__midi_executable.get()
+        data['await_jack'] = self.__await_jack.get()
+        data['jpmidi_port'] = self.__jpmidi_port
+        for i in range(len(self.__tabs)):
+            tab_name = self.__notebook.tab(i)['text']
             data[tab_name] = {}
-            data[tab_name]['curr_pitch'] = self.so_tabs[i]['curr_pitch'].get()
-            data[tab_name]['bpm'] = self.so_tabs[i]['bpm'].get()
+            data[tab_name]['curr_pitch'] = self.__tabs[i]['curr_pitch'].get()
+            data[tab_name]['bpm'] = self.__tabs[i]['bpm'].get()
             data[tab_name]['instruments'] = {}
-            for instrument in self.so_tabs[i]['instruments']:
+            for instrument in self.__tabs[i]['instruments']:
                 data[tab_name]['instruments'][instrument] = \
-                    self.so_tabs[i]['instruments'][instrument].get()
+                    self.__tabs[i]['instruments'][instrument].get()
         return data
 
     def restore_state(self, data):
         """Restore saved settings."""
         if 'midi_executable' in data:
-            self.so_midi_executable.set(data['midi_executable'])
+            self.__midi_executable.set(data['midi_executable'])
         if 'await_jack' in data:
-            self.so_await_jack.set(data['await_jack'])
+            self.__await_jack.set(data['await_jack'])
         if 'jpmidi_port' in data:
-            self.so_jpmidi_port = data['jpmidi_port']
-        for i in range(len(self.so_tabs)):
-            tab_name = self.so_notebook.tab(i)['text']
+            self.__jpmidi_port = data['jpmidi_port']
+        for i in range(len(self.__tabs)):
+            tab_name = self.__notebook.tab(i)['text']
             if tab_name not in data:
                 continue
-            self.so_tabs[i]['curr_pitch'].set(
+            self.__tabs[i]['curr_pitch'].set(
                 data[tab_name]['curr_pitch'])
-            self.so_tabs[i]['bpm'].set(data[tab_name]['bpm'])
+            self.__tabs[i]['bpm'].set(data[tab_name]['bpm'])
             if 'instruments' not in data[tab_name]:
                 continue
             for instrument in data[tab_name]['instruments']:
-                if instrument not in self.so_tabs[i]['instruments']:
+                if instrument not in self.__tabs[i]['instruments']:
                     continue
-                self.so_tabs[i]['instruments'][instrument].set(
+                self.__tabs[i]['instruments'][instrument].set(
                     data[tab_name]['instruments'][instrument])
 
     def get_so_interface(self, tab_num=None):
         """Return exercise interface."""
         if tab_num is None:
-            tab_num = self.so_num
-        tab_name = self.so_notebook.tab(tab_num)['text']
-        pitch = self.so_tabs[tab_num]['curr_pitch'].get()
-        measure = int(self.so_tabs[tab_num]['curr_measure'].get())
-        bpm = int(self.so_tabs[tab_num]['bpm'].get())
-        velocity = int(self.so_tabs[tab_num]['velocity'].get())
+            tab_num = self.__num
+        tab_name = self.__notebook.tab(tab_num)['text']
+        pitch = self.__tabs[tab_num]['curr_pitch'].get()
+        measure = int(self.__tabs[tab_num]['curr_measure'].get())
+        bpm = int(self.__tabs[tab_num]['bpm'].get())
+        velocity = int(self.__tabs[tab_num]['velocity'].get())
         instruments = {}
-        for instrument in self.so_tabs[tab_num]['instruments']:
+        for instrument in self.__tabs[tab_num]['instruments']:
             instruments[instrument] = bool(
-                self.so_tabs[tab_num]['instruments'][instrument].get())
+                self.__tabs[tab_num]['instruments'][instrument].get())
         return Song(
-            self.so_data_path,
+            self.__data_path,
             self.include_path,
             name=tab_name,
             pitch=pitch,
@@ -387,7 +387,7 @@ class SongMixin:
                     data="{} is not a file".format(path))
                 return
             content = path.read_text()
-            new_file = self.so_data_path.joinpath("{}.ly".format(so_name))
+            new_file = self.__data_path.joinpath("{}.ly".format(so_name))
             if new_file.is_file():
                 ErrorDialog(
                     self.root,
@@ -400,8 +400,8 @@ class SongMixin:
 
     async def remove_song(self):
         """Remove song."""
-        tab_num = self.so_num
-        tab_name = self.so_notebook.tab(tab_num)['text']
+        tab_num = self.__num
+        tab_name = self.__notebook.tab(tab_num)['text']
         confirm = OkCancelDialog(
             self.root,
             data="Are you sure you want to delete {}? This cannot be undone.".format(
@@ -410,11 +410,11 @@ class SongMixin:
             return
         self.stopping = True
         await self.stop()
-        tab = self.so_tabs[tab_num]['tab']
-        self.so_notebook.forget(tab)
+        tab = self.__tabs[tab_num]['tab']
+        self.__notebook.forget(tab)
         tab.destroy()
-        del self.so_tabs[tab_num]
-        file_name = Path(self.so_data_path).joinpath(
+        del self.__tabs[tab_num]
+        file_name = Path(self.__data_path).joinpath(
             "{}.ly".format(tab_name))
         # pylint: disable=no-member
         # does too!
@@ -424,72 +424,72 @@ class SongMixin:
         """Remove all compiled files."""
         # remove files
         for file_ in chain(
-                self.so_data_path.glob("*.midi"),
-                self.so_data_path.glob("*.png"),
-                self.so_data_path.glob("*.pdf")):
+                self.__data_path.glob("*.midi"),
+                self.__data_path.glob("*.png"),
+                self.__data_path.glob("*.pdf")):
             file_.unlink()
 
         # display fresh sheets
-        for i in range(len(self.so_tabs)):
+        for i in range(len(self.__tabs)):
             await SongMixin.update_sheet(self, tab_num=i)
 
     def change_page(self, increment=True, page=None, scroll=False):
         """Change page."""
         if scroll:
-            delta_t = datetime.now() - self.so_scroll_time
-            self.so_scroll_time = datetime.now()
+            delta_t = datetime.now() - self.__scroll_time
+            self.__scroll_time = datetime.now()
             if delta_t.total_seconds() < 0.5:
                 return
         if page is not None:
-            self.so_tabs[self.so_num]['page'] = int(page)
+            self.__tabs[self.__num]['page'] = int(page)
         elif increment:
-            self.so_tabs[self.so_num]['page'] += 1
+            self.__tabs[self.__num]['page'] += 1
         else:
-            if self.so_tabs[self.so_num]['page'] > 1:
-                self.so_tabs[self.so_num]['page'] -= 1
+            if self.__tabs[self.__num]['page'] > 1:
+                self.__tabs[self.__num]['page'] -= 1
         asyncio.ensure_future(SongMixin.update_sheet(self))
 
     async def update_sheet(self, tab_num=None):
         """Display relevant sheet."""
         if tab_num is None:
-            tab_num = self.so_num
+            tab_num = self.__num
         Size = namedtuple('Size', ['width', 'height'])
         size = Size(
-            self.so_tabs[tab_num]['sheet'].winfo_width(),
-            self.so_tabs[tab_num]['sheet'].winfo_height())
+            self.__tabs[tab_num]['sheet'].winfo_width(),
+            self.__tabs[tab_num]['sheet'].winfo_height())
         await SongMixin.resize_sheet(self, size, tab_num)
 
     async def resize_sheet(self, event, tab_num):
         """Resize sheets to screen size."""
-        self.so_tabs[tab_num]['sheet'].delete("left")
+        self.__tabs[tab_num]['sheet'].delete("left")
         left = SongMixin.get_so_interface(self, tab_num)
         # make sure pages are compiled
         await self.get_file(left)
-        left.page = self.so_tabs[tab_num]['page']
+        left.page = self.__tabs[tab_num]['page']
         if not left.get_filename(FileType.png).is_file():
             # page does not exists, roll around to 1
-            self.so_tabs[tab_num]['page'] = 1
+            self.__tabs[tab_num]['page'] = 1
             left.page = 1
         left_path = await self.get_single_sheet(
             left,
             (event.width - 1)/2,
             event.height)
-        self.so_tabs[tab_num]['sheet'].create_image(
+        self.__tabs[tab_num]['sheet'].create_image(
             0,
             0,
             image=self.image_cache[left_path]['image'],
             anchor=tk.NW,
             tags="left")
         # right page
-        self.so_tabs[tab_num]['sheet'].delete("right")
+        self.__tabs[tab_num]['sheet'].delete("right")
         right = SongMixin.get_so_interface(self, tab_num)
-        right.page = self.so_tabs[tab_num]['page'] + 1
+        right.page = self.__tabs[tab_num]['page'] + 1
         if right.get_filename(FileType.png).is_file():
             right_path = await self.get_single_sheet(
                 right,
                 (event.width - 1)/2,
                 event.height)
-            self.so_tabs[tab_num]['sheet'].create_image(
+            self.__tabs[tab_num]['sheet'].create_image(
                 self.image_cache[left_path]['image'].width() + 1,
                 0,
                 image=self.image_cache[right_path]['image'],
@@ -520,20 +520,20 @@ class SongMixin:
                 "Still searching for pmidi port, cancelled playback.")
             self.show_messages()
             return
-        if self.so_jpmidi_port is None and self.so_midi_executable.get() == 'jpmidi':
+        if self.__jpmidi_port is None and self.__midi_executable.get() == 'jpmidi':
             await self.select_port(pmidi=False)
         try:
-            if self.so_midi_executable.get() == 'pmidi':
+            if self.__midi_executable.get() == 'pmidi':
                 self.player = await play_midi(self.port, midi)
             else:
                 self.player = await play_midi(
-                    self.so_jpmidi_port, midi, pmidi=False)
+                    self.__jpmidi_port, midi, pmidi=False)
         except Exception as err:
             ErrorDialog(
                 self.root,
                 data="Could not start midi playback\n{}".format(str(err)))
             raise
-        self.so_tabs[self.so_num]['play_stop'].set("stop")
+        self.__tabs[self.__num]['play_stop'].set("stop")
         asyncio.ensure_future(exec_on_midi_end(
             self.player,
             partial(SongMixin.on_midi_stop, self)))
@@ -541,4 +541,4 @@ class SongMixin:
     async def on_midi_stop(self):
         """Handle end of midi playback."""
         self.player = None
-        self.so_tabs[self.so_num]['play_stop'].set("play")
+        self.__tabs[self.__num]['play_stop'].set("play")

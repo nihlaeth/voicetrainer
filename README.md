@@ -46,7 +46,6 @@ voicetrainer
 * tweak pmidi settings (shorter sleep after midi end)
 * document song feature and lily comment settings
 * refactor export to be in MainWindow and file menu
-* refactor mixins to use __ instead of ex_ and so_
 * add reset button for songs
 * reset midi after stopping or killing playback
 * phase out midion/off and sheeton/off vars in favor of comments
