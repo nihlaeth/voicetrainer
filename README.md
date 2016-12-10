@@ -17,8 +17,6 @@ The parameters are:
 * ${sound} - vocal, for use in lyricsmode (ex: Mi, usage: \lyricsmode { ${sound} })
 * ${tempo} - bpm, for midi tempo (ex: 140, usage: \tempo ${temp}=4)
 
-Then there's the sheeton, sheetoff, midion and midioff variables which are used to differentiate between midi and visual output. See existing exercises for examples.
-
 These parameters are not optional, though you might ignore a few by placing them in a comment.
 
 ## Examples
@@ -48,7 +46,6 @@ voicetrainer
 * refactor export to be in MainWindow and file menu
 * add reset button for songs
 * reset midi after stopping or killing playback
-* phase out midion/off and sheeton/off vars in favor of comments
 * make release and publish
 * repeat once on click on exercise sheet
 * report errors from play module in ui

@@ -118,49 +118,40 @@ class Interface:
     def get_final_lily_code(self, file_type: FileType) -> str:
         """Lily code with substitutions made."""
         lily_code = Template(self.get_raw_lily_code())
-        if file_type == FileType.midi:
-            midion = ""
-            midioff = ""
-            sheeton = "%{"
-            sheetoff = "%}"
-        else:
-            midion = "%{"
-            midioff = "%}"
-            sheeton = ""
-            sheetoff = ""
         if self.has_sound:
             s_lily_code = lily_code.safe_substitute(
-                midion=midion,
-                midioff=midioff,
-                sheeton=sheeton,
-                sheetoff=sheetoff,
                 tempo=self.bpm,
                 pitch=self.pitch,
                 pitch_noheight=self.pitch[0],
                 sound=self.sound)
         else:
             s_lily_code = lily_code.safe_substitute(
-                midion=midion,
-                midioff=midioff,
-                sheeton=sheeton,
-                sheetoff=sheetoff,
                 tempo=self.bpm,
                 pitch=self.pitch,
                 pitch_noheight=self.pitch[0])
-        if self.has_instruments:
-            ignore_count = 0
-            keep_data = []
-            for line in s_lily_code.split('\n'):
-                tokens = tokenize(line)
-                if len(tokens) > 3 and \
-                        tokens[0] == '%' and \
-                        tokens[1] == 'instrument':
-                    if not self.instruments[tokens[3]]:
-                        ignore_count += 1 if tokens[2] == 'start' else -1
-                if ignore_count < 1:
-                    keep_data.append(line)
-            s_lily_code = '\n'.join(keep_data)
-        return s_lily_code
+        ignore_count = 0
+        keep_data = []
+        for line in s_lily_code.split('\n'):
+            tokens = tokenize(line)
+
+            if (file_type == FileType.png or file_type == FileType.pdf) and \
+                    len(tokens) > 2 and \
+                    tokens[0] == '%' and \
+                    tokens[1] == 'midionly':
+                ignore_count += 1 if tokens[2] == 'start' else -1
+            if file_type == FileType.midi and \
+                    len(tokens) > 2 and \
+                    tokens[0] == '%' and \
+                    tokens[1] == 'sheetonly':
+                ignore_count += 1 if tokens[2] == 'start' else -1
+            if self.has_instruments and len(tokens) > 3 and \
+                    tokens[0] == '%' and \
+                    tokens[1] == 'instrument':
+                if not self.instruments[tokens[3]]:
+                    ignore_count += 1 if tokens[2] == 'start' else -1
+            if ignore_count < 1:
+                keep_data.append(line)
+        return '\n'.join(keep_data)
 
 
     def get_config(self):
