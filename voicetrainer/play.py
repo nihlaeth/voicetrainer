@@ -85,7 +85,7 @@ async def _read_stderr(stderr, err_cb):
         err_cb(bytes.decode(await stderr.readline()))
 
 async def _read_stdout(stdout):
-    return bytes.decode(await stdout.readuntil('jpmidi> '))
+    return bytes.decode(await stdout.readuntil(str.encode('jpmidi> ')))
 
 async def _write_stdin(stdin, msg):
     stdin.write(str.encode('{}\n'.format(msg)))

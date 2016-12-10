@@ -39,7 +39,7 @@ class SongMixin:
             list("cdefgab"))]
         self.so_tabs = []
         self.so_scroll_time = datetime.now()
-        self.so_jpmidi_port = None
+        self.so_jpmidi_port = 'system:'
 
         SongMixin.create_widgets(self)
 

@@ -84,7 +84,7 @@ class MainWindow(ExerciseMixin, SongMixin):
         selection_dialog = PortSelection(
             self.root,
             data=await list_ports(pmidi=pmidi),
-            current_port=self.port_match if pmidi else self.so_jpmidi_port)
+            current_port=str(self.port_match) if pmidi else str(self.so_jpmidi_port))
         if pmidi:
             self.port_match = await selection_dialog.await_data()
             if self.port is not None:

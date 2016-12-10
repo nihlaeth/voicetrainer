@@ -25,7 +25,7 @@ These parameters are not optional, though you might ignore a few by placing them
 See https://github.com/nihlaeth/voicetrainerdata for exercise and song examples.
 
 ## Dependencies
-* python >= 3.5.1
+* python >= 3.5.2
 * pillow
 * tk/tcl
 * lilypond (I used the dev version)
@@ -52,6 +52,7 @@ voicetrainer
 * phase out midion/off and sheeton/off vars in favor of comments
 * make release and publish
 * repeat once on click on exercise sheet
+* report errors from play module in ui
 
 ## Problems
 * it's possible to play 2 midi streams at the same time with the right timing

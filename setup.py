@@ -7,7 +7,7 @@ setup(
     description='midi voice exercises',
     author='nihlaeth',
     author_email='info@nihlaeth.nl',
-    python_requires='>=3.5.1',
+    python_requires='>=3.5.2',
     packages=find_packages(),
     install_requires=['pillow'],
     entry_points={
