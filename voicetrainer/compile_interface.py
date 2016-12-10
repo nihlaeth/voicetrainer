@@ -124,9 +124,6 @@ class Interface:
                 elif tokens[0] == 'voicetrainerKey':
                     keep_data.append(
                         "voicetrainerKey = {}".format(self.pitch))
-                elif tokens[0] == 'voicetrainerKeyNoOctave':
-                    keep_data.append(
-                        "voicetrainerKeyNoOctave = {}".format(self.pitch[0]))
                 elif tokens[0] == 'voicetrainerSound':
                     keep_data.append(
                         "voicetrainerSound = \"{}\"".format(self.sound))
