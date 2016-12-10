@@ -84,7 +84,7 @@ class MainWindow(ExerciseMixin, SongMixin):
         selection_dialog = PortSelection(
             self.root,
             data=await list_ports(pmidi=pmidi),
-            current_port=str(self.port_match) if pmidi else str(self.so_jpmidi_port))
+            current_port=str(self.port_match) if pmidi else str(self._SongMixin__jpmidi_port))
         if pmidi:
             self.port_match = await selection_dialog.await_data()
             if self.port is not None:
@@ -93,7 +93,7 @@ class MainWindow(ExerciseMixin, SongMixin):
                 self.port_label_text.set('pmidi port: None')
                 await self.find_port()
         else:
-            self.so_jpmidi_port = await selection_dialog.await_data()
+            self._SongMixin__jpmidi_port = await selection_dialog.await_data()
 
     def create_widgets(self):
         """Put some stuff up to look at."""
