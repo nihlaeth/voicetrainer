@@ -432,7 +432,8 @@ class ExerciseMixin:
         asyncio.ensure_future(ExerciseMixin.update_sheet(self))
         if self.player is not None:
             self.play_next = True
-            await self.stop()
+            if self.player != '...':
+                await self.stop()
         else:
             await ExerciseMixin.play(self)
 
@@ -478,7 +479,7 @@ class ExerciseMixin:
 
     async def play_or_stop(self):
         """Play or stop midi."""
-        if self.player is not None:
+        if self.player is not None and self.player != '...':
             # user stopped playback
             self.stopping = True
             await self.stop()
@@ -495,6 +496,11 @@ class ExerciseMixin:
                 "Still searching for pmidi port, cancelled playback.")
             self.show_messages()
             return
+        if self.player is not None:
+            self.new_message("already playing")
+            return
+        # reserve player
+        self.player = "..."
         try:
             self.player = await play_midi(self.port, midi)
         except Exception as err:

@@ -321,6 +321,9 @@ class MainWindow(ExerciseMixin, SongMixin):
 
     async def stop(self):
         """Stop midi regardless of state."""
+        if self.player == '...':
+            self.new_message("playback still starting - cannot stop it")
+            return
         if self.player is not None:
             await stop_midi(self.player)
 

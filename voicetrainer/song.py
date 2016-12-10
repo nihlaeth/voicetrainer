@@ -503,9 +503,7 @@ class SongMixin:
 
     async def play_or_stop(self):
         """Play or stop midi."""
-        if self.player is not None:
-            # user stopped playback
-            self.stopping = True
+        if self.player is not None and self.player != '...':
             await self.stop()
         else:
             await SongMixin.play(self)
@@ -522,6 +520,11 @@ class SongMixin:
             return
         if self.__jpmidi_port is None and self.__midi_executable.get() == 'jpmidi':
             await self.select_port(pmidi=False)
+        if self.player is not None:
+            self.new_message("already playing")
+            return
+        # reserve player
+        self.player = "..."
         try:
             if self.__midi_executable.get() == 'pmidi':
                 self.player = await play_midi(self.port, midi)
