@@ -48,9 +48,15 @@ voicetrainer
 * add reset button for songs
 * reset midi after stopping or killing playback
 * make release and publish
+* have scroll wheel scroll scrollbars
+* add recompile button to songs to save time when editing
+* correctly set current pitch in restore_state
+* disable interface elements if lily code does not provide variable
 
 ## Problems
 * song and exercise definitions are not valid lily code, making syntax checking harder
+* jpmidi transport does not reset to 0
+* clear cache does not clear second sheet page
 
 ## Planned features
 * add command line script to compile / edit midi
