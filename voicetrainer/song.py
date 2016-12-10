@@ -149,6 +149,14 @@ class SongMixin:
             self.__tabs[tab_num]['instruments'][instrument] = intvar
             self.__tabs[tab_num]['icheckboxes'].append(checkbox)
 
+        recompile = ttk.Button(
+            frame,
+            text='Recompile',
+            command=lambda i=tab_num: asyncio.ensure_future(
+                SongMixin.clear_cache(self, tab_num=i)))
+        self.__tabs[tab_num]['recompile'] = recompile
+        recompile.grid(column=0, row=5, columnspan=2, sticky=tk.W+tk.N+tk.E)
+
         if 'pages' in config:
             num_pages = int(config['pages'])
             no_pages = False
@@ -161,21 +169,21 @@ class SongMixin:
             text='First page',
             command=lambda: SongMixin.change_page(self, page=1))
         self.__tabs[tab_num]['first_page'] = first_page
-        first_page.grid(column=0, row=5, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        first_page.grid(column=0, row=6, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         next_page = ttk.Button(
             frame,
             text='Next page',
             command=lambda: SongMixin.change_page(self))
         self.__tabs[tab_num]['next_page'] = next_page
-        next_page.grid(column=0, row=6, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        next_page.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         prev_page = ttk.Button(
             frame,
             text='Previous page',
             command=lambda: SongMixin.change_page(self, increment=False))
         self.__tabs[tab_num]['prev_page'] = prev_page
-        prev_page.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        prev_page.grid(column=0, row=8, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         last_page = ttk.Button(
             frame,
@@ -183,7 +191,7 @@ class SongMixin:
             command=lambda last=num_pages: SongMixin.change_page(
                 self, page=last))
         self.__tabs[tab_num]['last_page'] = last_page
-        last_page.grid(column=0, row=8, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        last_page.grid(column=0, row=9, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         if no_pages:
             first_page.state(('disabled',))
@@ -200,7 +208,7 @@ class SongMixin:
             command=lambda: asyncio.ensure_future(
                 SongMixin.play_or_stop(self)))
         self.__tabs[tab_num]['play'] = play
-        play.grid(column=0, row=9, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        play.grid(column=0, row=10, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         # sheet display
         sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
@@ -435,18 +443,25 @@ class SongMixin:
         # does too!
         file_name.unlink()
 
-    async def clear_cache(self):
+    async def clear_cache(self, tab_num=None):
         """Remove all compiled files."""
+        if tab_num is not None:
+            tab_name = self.__notebook.tab(tab_num)['text'] + '-'
+        else:
+            tab_name = ''
         # remove files
         for file_ in chain(
-                self.__data_path.glob("*.midi"),
-                self.__data_path.glob("*.png"),
-                self.__data_path.glob("*.pdf")):
+                self.__data_path.glob("{}*.midi".format(tab_name)),
+                self.__data_path.glob("{}*.png".format(tab_name)),
+                self.__data_path.glob("{}*.pdf".format(tab_name))):
             file_.unlink()
 
         # display fresh sheets
-        for i in range(len(self.__tabs)):
-            await SongMixin.update_sheet(self, tab_num=i)
+        if tab_num is None:
+            for i in range(len(self.__tabs)):
+                await SongMixin.update_sheet(self, tab_num=i)
+        else:
+            await SongMixin.update_sheet(self, tab_num=tab_num)
 
     def change_page(self, increment=True, page=None, scroll=False):
         """Change page."""
@@ -477,6 +492,7 @@ class SongMixin:
     async def resize_sheet(self, event, tab_num):
         """Resize sheets to screen size."""
         self.__tabs[tab_num]['sheet'].delete("left")
+        self.__tabs[tab_num]['sheet'].delete("right")
         left = SongMixin.get_so_interface(self, tab_num)
         # make sure pages are compiled
         await self.get_file(left)
@@ -496,7 +512,6 @@ class SongMixin:
             anchor=tk.NW,
             tags="left")
         # right page
-        self.__tabs[tab_num]['sheet'].delete("right")
         right = SongMixin.get_so_interface(self, tab_num)
         right.page = self.__tabs[tab_num]['page'] + 1
         if right.get_filename(FileType.png).is_file():

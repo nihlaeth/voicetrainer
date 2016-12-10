@@ -38,11 +38,9 @@ voicetrainer
 * reset midi after stopping or killing playback
 * make release and publish
 * have scroll wheel scroll scrollbars
-* add recompile button to songs to save time when editing
 
 ## Problems
 * jpmidi transport does not reset to 0
-* clear cache does not clear second sheet page
 
 ## Planned features
 * add command line script to compile / edit midi
