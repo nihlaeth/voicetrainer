@@ -1,5 +1,5 @@
 """All the song stuff."""
-from tkinter import ttk 
+from tkinter import ttk
 import tkinter as tk
 import asyncio
 from pathlib import Path
@@ -65,7 +65,7 @@ class SongMixin:
         bpm_label.grid(column=0, row=0, sticky=tk.N+tk.E)
         bpm = tk.Scale(
             frame,
-            from_=60,
+            from_=40,
             to=240,
             tickinterval=20,
             showvalue=1,
@@ -154,6 +154,13 @@ class SongMixin:
         self.__tabs[tab_num]['recompile'] = recompile
         recompile.grid(column=0, row=5, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
+        reset = ttk.Button(
+            frame,
+            text='Reset to song default',
+            command=lambda i=tab_num: SongMixin.reset_song(self, tab_num=i))
+        self.__tabs[tab_num]['reset'] = reset
+        reset.grid(column=0, row=6, columnspan=2, sticky=tk.W+tk.N+tk.E)
+
         if 'pages' in config:
             num_pages = int(config['pages'])
             no_pages = False
@@ -166,21 +173,21 @@ class SongMixin:
             text='First page',
             command=lambda: SongMixin.change_page(self, page=1))
         self.__tabs[tab_num]['first_page'] = first_page
-        first_page.grid(column=0, row=6, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        first_page.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         next_page = ttk.Button(
             frame,
             text='Next page',
             command=lambda: SongMixin.change_page(self))
         self.__tabs[tab_num]['next_page'] = next_page
-        next_page.grid(column=0, row=7, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        next_page.grid(column=0, row=8, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         prev_page = ttk.Button(
             frame,
             text='Previous page',
             command=lambda: SongMixin.change_page(self, increment=False))
         self.__tabs[tab_num]['prev_page'] = prev_page
-        prev_page.grid(column=0, row=8, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        prev_page.grid(column=0, row=9, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         last_page = ttk.Button(
             frame,
@@ -188,7 +195,7 @@ class SongMixin:
             command=lambda last=num_pages: SongMixin.change_page(
                 self, page=last))
         self.__tabs[tab_num]['last_page'] = last_page
-        last_page.grid(column=0, row=9, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        last_page.grid(column=0, row=10, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         if no_pages:
             first_page.state(('disabled',))
@@ -205,7 +212,7 @@ class SongMixin:
             command=lambda: asyncio.ensure_future(
                 SongMixin.play_or_stop(self)))
         self.__tabs[tab_num]['play'] = play
-        play.grid(column=0, row=10, columnspan=2, sticky=tk.W+tk.N+tk.E)
+        play.grid(column=0, row=11, columnspan=2, sticky=tk.W+tk.N+tk.E)
 
         # sheet display
         sheet = tk.Canvas(tab, bd=0, highlightthickness=0)
@@ -295,6 +302,16 @@ class SongMixin:
             column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
         self.__notebook.rowconfigure(0, weight=1)
         self.__notebook.columnconfigure(0, weight=1)
+
+    def reset_song(self, tab_num):
+        """Set song pitch and bpm to song default."""
+        config = SongMixin.get_so_interface(self, tab_num).config
+        if 'key' in config:
+            self.__tabs[tab_num]['curr_pitch'].set(config['key'])
+        if 'tempo' in config:
+            self.__tabs[tab_num]['bpm'].set(int(config['tempo']))
+        asyncio.ensure_future(
+            SongMixin.update_sheet(self, tab_num=tab_num))
 
     @property
     def __num(self):
@@ -450,7 +467,7 @@ class SongMixin:
         for file_ in chain(
                 self.__data_path.glob("{}*.midi".format(tab_name)),
                 self.__data_path.glob("{}*.png".format(tab_name)),
-               self.__data_path.glob("{}*.pdf".format(tab_name))):
+                self.__data_path.glob("{}*.pdf".format(tab_name))):
             file_.unlink()
 
         # display fresh sheets

@@ -33,10 +33,8 @@ voicetrainer
 * document song feature and lily settings
 * document jpmidi and jack transport use
 * refactor export to be in MainWindow and file menu
-* add reset button for songs
 * make release and publish
 * have scroll wheel scroll scrollbars
-* lower min_bpm for songs
 * set sane defaults for pylint
 
 ## Problems
