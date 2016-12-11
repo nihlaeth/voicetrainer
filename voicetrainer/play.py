@@ -1,12 +1,12 @@
 """Play midi via fluidsynth."""
 from typing import Callable
+from itertools import filterfalse
 from pathlib import Path
 from asyncio import create_subprocess_exec, ensure_future
 from asyncio.subprocess import PIPE, Process
 from pkg_resources import resource_filename, Requirement, cleanup_resources
 
-# pylint: disable=too-many-branches
-async def list_ports(pmidi=True, err_cb=lambda err: print(err)) -> str:
+async def list_ports(pmidi=True, err_cb=print) -> str:
     """List pmidi ports."""
     if pmidi:
         cmd = 'pmidi'
@@ -17,38 +17,19 @@ async def list_ports(pmidi=True, err_cb=lambda err: print(err)) -> str:
     result = await create_subprocess_exec(
         cmd, options, stdout=PIPE, stderr=PIPE)
     output, err = await result.communicate()
-    if len(err) > 0:
+    if len(err) > 0 or result.returncode != 0:
         err_cb(bytes.decode(err))
-    if result.returncode != 0:
-        raise OSError('{} not functioning {}'.format(cmd, err))
     if pmidi:
         return bytes.decode(output).split('\n')
-    else:
-        ports = []
-        i = 0
-        discard = False
-        name = ''
-        for line in bytes.decode(output).split('\n'):
-            if line.startswith('Jack:'):
-                # jack debug message
-                continue
-            if i == 0:
-                name = line
-                i = 1
-            elif i == 1:
-                if 'input' not in line:
-                    discard = True
-                i = 2
-            elif i == 2:
-                if 'midi' not in line:
-                    discard = True
-                if not discard:
-                    ports.append(name)
-                i = 0
-                discard = False
-        return ports
+    ports = []
+    lines = filterfalse(
+            lambda x: x.startswith('Jack:'),
+            bytes.decode(output).split('\n'))
+    for name, input_, midi in zip(*[lines]*3):
+        if 'input' in input_ and 'midi' in midi:
+            ports.append(name)
+    return ports
 
-# pylint: disable=too-few-public-methods
 class PortFinder:
 
     """Find correct pmidi port."""
@@ -100,7 +81,7 @@ async def play_midi(
         port: str,
         midi: Path,
         on_midi_end,
-        error_cb=lambda err: print(err),
+        error_cb=print,
         pmidi=True,
         await_jack=False) -> Process:
     """Start playing midi file."""

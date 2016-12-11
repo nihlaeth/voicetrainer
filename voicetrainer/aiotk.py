@@ -139,7 +139,6 @@ class ErrorDialog(Dialog):
             self.frame, text="OK", command=self.close)
         self.button.grid(row=1, column=0)
 
-# pylint: disable=too-many-instance-attributes
 class Messages(Dialog):
 
     """Display messages."""
@@ -258,7 +257,6 @@ class PortSelection(Dialog):
 # file dialogs adapted from:
 # https://hg.python.org/cpython/file/tip/Lib/tkinter/filedialog.py
 
-# pylint: disable=no-member
 class FileDialog(Dialog):
 
     """Standard file selection dialog -- no checks on selected file."""
@@ -330,7 +328,6 @@ class FileDialog(Dialog):
         self.top.bind('<Alt-w>', self.cancel_command)
         self.top.bind('<Alt-W>', self.cancel_command)
 
-    # pylint: disable=too-many-arguments
     def __init__(
             self,
             root,

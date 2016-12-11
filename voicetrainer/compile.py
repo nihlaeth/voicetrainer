@@ -6,7 +6,7 @@ from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
 
 from voicetrainer.midi import (
-    MidiFile, MidiTrack, DeltaTime, MidiEvent, getNumbersAsList)
+    MidiFile, MidiTrack, DeltaTime, MidiEvent, get_numbers_as_list)
 from voicetrainer.compile_interface import FileType, Interface, Exercise
 
 def measure_to_tick(time_changes, measure, ticks_per_quarter_note):
@@ -31,10 +31,8 @@ def get_measure_num(time_changes, total_ticks, ticks_per_quarter_note):
     measure = 1
     curr_tick = 0
     curr_quarts_m = 4
-    # pylint: disable=consider-using-enumerate
-    for i in range(len(time_changes)):
+    for next_tick, next_quarts_m in time_changes:
         stop = False
-        next_tick, next_quarts_m = time_changes[i]
         if next_tick == curr_tick:
             # overwrite current quarts_per_minute
             curr_quarts_m = next_quarts_m
@@ -58,7 +56,6 @@ def get_measure_num(time_changes, total_ticks, ticks_per_quarter_note):
         measure += delta_measure
     return measure
 
-# pylint: disable=invalid-name,bad-continuation
 async def compile_(interface: Interface, file_type: FileType) -> Tuple[str, str]:
     """Open interface file, format, and compile with lilypond."""
     proc = await create_subprocess_exec(
@@ -78,12 +75,11 @@ def midi_generator(midi: MidiFile) -> Tuple[int, DeltaTime, MidiEvent]:
     for i, track in enumerate(midi.tracks):
         delta_time = None
         for event in track.events:
-            if event.isDeltaTime():
+            if event.is_delta_time():
                 delta_time = event
             else:
                 yield (i, delta_time, event)
 
-# pylint: disable=too-few-public-methods
 class MidiIterator:
 
     """Wrap midi_generator so it can be used asynchronously."""
@@ -101,6 +97,25 @@ class MidiIterator:
         except StopIteration:
             raise StopAsyncIteration
 
+async def _collect_time_changes(midi: MidiFile):
+    time_changes = []
+    total_ticks = [0] * len(midi.tracks)
+    async for track_num, delta_time, event in MidiIterator(midi):
+        total_ticks[track_num] += delta_time.time
+        if event.type_ == "TIME_SIGNATURE":
+            # t_signature explained:
+            # in a 4/4 time signature, meaning there 4 quarter notes
+            # in a measure,
+            # t_signature[0] is the numerator, or the first 4
+            # pow(2, t_signature[1]) is the divisor, or the second 4
+            t_signature = get_numbers_as_list(event.data)
+            # what we're doing here in essence is changes in number
+            # of quarter notes per measure at the cumulative tick count
+            time_changes.append(
+                (
+                    total_ticks[track_num],
+                    (t_signature[0] / pow(2, t_signature[1])) * 4))
+    return time_changes
 
 async def create_clipped_midi(interface: Interface):
     """Start midi from start_measure, with events intact."""
@@ -109,29 +124,17 @@ async def create_clipped_midi(interface: Interface):
         FileType.midi, compiling=True)))
     midi.read()
     midi.close()
-    ticks_per_quarter_note = midi.ticksPerQuarterNote
-    # collect time_changes
-    time_changes = []
-    total_ticks = []
-    async for track_num, delta_time, event in MidiIterator(midi):
-        if len(total_ticks) == track_num:
-            total_ticks.append(0)
-        total_ticks[track_num] += delta_time.time
-        if event.type == "TIME_SIGNATURE":
-            t_signature = getNumbersAsList(event.data)
-            num = t_signature[0]
-            div = pow(2, t_signature[1])
-            time_changes.append(
-                (total_ticks[track_num], (num / div) * 4))
-    # construct new midi
-    total_ticks = []
+
     new_midi = MidiFile()
-    new_midi.ticksPerQuarterNote = midi.ticksPerQuarterNote
+    new_midi.ticks_per_quarter_note = midi.ticks_per_quarter_note
     new_midi.format = midi.format
+    for track_num, _ in enumerate(midi.tracks):
+        new_midi.tracks.append(MidiTrack(track_num))
+
+    ticks_per_quarter_note = midi.ticks_per_quarter_note
+    time_changes = await _collect_time_changes(midi)
+    total_ticks = [0] * len(midi.tracks)
     async for track_num, delta_time, event in MidiIterator(midi):
-        if len(total_ticks) == track_num:
-            total_ticks.append(0)
-            new_midi.tracks.append(MidiTrack(track_num))
         total_ticks[track_num] += delta_time.time
         measure = get_measure_num(
             time_changes,
@@ -139,7 +142,7 @@ async def create_clipped_midi(interface: Interface):
             ticks_per_quarter_note)
 
         # adjust velocity
-        if event.type in ['NOTE_ON', 'NOTE_OFF']:
+        if event.type_ in ['NOTE_ON', 'NOTE_OFF']:
             new_velocity = event.velocity + interface.velocity
             if new_velocity < 0:
                 new_velocity = 0
@@ -148,7 +151,7 @@ async def create_clipped_midi(interface: Interface):
             event.velocity = new_velocity
 
         # the actual clipping
-        if event.type in ['NOTE_ON', 'NOTE_OFF'] and \
+        if event.type_ in ['NOTE_ON', 'NOTE_OFF'] and \
                 measure < interface.start_measure:
             continue
         else:
@@ -169,7 +172,7 @@ async def create_clipped_midi(interface: Interface):
             new_midi.tracks[track_num].events.append(delta_time)
             new_midi.tracks[track_num].events.append(event)
     for track in new_midi.tracks:
-        track.updateEvents()
+        track.update_events()
     new_midi.open(str(interface.get_filename(FileType.midi)), 'wb')
     new_midi.write()
     new_midi.close()

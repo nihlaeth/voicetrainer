@@ -35,7 +35,6 @@ voicetrainer
 * refactor export to be in MainWindow and file menu
 * make release and publish
 * have scroll wheel scroll scrollbars
-* set sane defaults for pylint
 * display natural tempo and key
 * make measure selector scale
 * exercise next should look at enabled features

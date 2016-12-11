@@ -16,7 +16,6 @@ from voicetrainer.aiotk import (
 from voicetrainer.play import play_midi
 from voicetrainer.compile_interface import FileType, Song
 
-# pylint: disable=too-many-instance-attributes,no-member
 class SongMixin:
 
     """
@@ -40,6 +39,8 @@ class SongMixin:
 
         SongMixin.create_widgets(self)
 
+    # FIXME: split up into multiple functions / classes
+    # pylint: disable=too-many-locals,too-many-statements
     def create_tab(self, song: str) -> None:
         """Populate song tab."""
         tab = ttk.Frame(self.__notebook)
@@ -76,7 +77,7 @@ class SongMixin:
             bpm.set(int(config['tempo']))
         else:
             bpm.set(140)
-            bpm.state(('disabled',))
+            bpm.configure(state=tk.DISABLED)
         self.__tabs[tab_num]['bpm'] = bpm
         bpm.grid(column=1, row=0, sticky=tk.W+tk.N)
 
@@ -95,7 +96,7 @@ class SongMixin:
             textvar.set(config['key'])
         else:
             textvar.set('c')
-            curr_pitch.state(('disabled',))
+            curr_pitch.configure(state=tk.DISABLED)
         self.__tabs[tab_num]['pitch_menu'] = curr_pitch
         curr_pitch.grid(column=1, row=1, sticky=tk.W+tk.N)
 
@@ -117,7 +118,7 @@ class SongMixin:
         self.__tabs[tab_num]['curr_measure'] = measure
         measure.grid(column=1, row=2, sticky=tk.W+tk.N)
         if no_measures:
-            measure.state(('disabled',))
+            measure.configure(state=tk.DISABLED)
 
         velocity = tk.Spinbox(
             frame,
@@ -453,8 +454,6 @@ class SongMixin:
         del self.__tabs[tab_num]
         file_name = Path(self.__data_path).joinpath(
             "{}.ly".format(tab_name))
-        # pylint: disable=no-member
-        # does too!
         file_name.unlink()
 
     async def clear_cache(self, tab_num=None):
@@ -503,6 +502,8 @@ class SongMixin:
         """Display relevant sheet."""
         if tab_num is None:
             tab_num = self.__num
+        # pylint: disable=invalid-name
+        # type declaration
         Size = namedtuple('Size', ['width', 'height'])
         size = Size(
             self.__tabs[tab_num]['sheet'].winfo_width(),

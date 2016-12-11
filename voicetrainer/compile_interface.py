@@ -16,7 +16,6 @@ class FileType(Enum):
     png = 3
     pdf = 4
 
-# pylint: disable=too-many-instance-attributes
 class Interface:
 
     """Filenames and compile flags for exercises."""
@@ -24,7 +23,6 @@ class Interface:
     has_start_measure = False
     has_instruments = False
 
-    # pylint: disable=too-many-arguments
     def __init__(
             self,
             data_path: Path,
@@ -115,18 +113,17 @@ class Interface:
         keep_data = []
         for line in lily_code.split('\n'):
             tokens = tokenize(line)
-            if len(tokens) > 2 and \
-                    tokens[0].startswith('voicetrainer') and \
-                    tokens[1] == '=':
-                if tokens[0] == 'voicetrainerTempo':
-                    keep_data.append(
-                        "voicetrainerTempo = {}".format(self.bpm))
-                elif tokens[0] == 'voicetrainerKey':
-                    keep_data.append(
-                        "voicetrainerKey = {}".format(self.pitch))
-                elif tokens[0] == 'voicetrainerSound':
-                    keep_data.append(
-                        "voicetrainerSound = \"{}\"".format(self.sound))
+            replace_strings = {
+                'voicetrainerTempo': self.bpm,
+                'voicetrainerKey': self.pitch,
+                'voicetrainerSound': '"{}"'.format(self.sound)}
+            if (
+                    len(tokens) > 2 and
+                    tokens[0] in replace_strings and
+                    tokens[1] == '='):
+                keep_data.append("{} = {}".format(
+                    tokens[0],
+                    replace_strings[tokens[0]]))
                 continue
 
             if (file_type == FileType.png or file_type == FileType.pdf) and \

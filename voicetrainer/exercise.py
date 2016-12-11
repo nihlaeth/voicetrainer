@@ -17,8 +17,6 @@ from voicetrainer.play import play_midi
 from voicetrainer.compile import compile_all
 from voicetrainer.compile_interface import FileType, Exercise
 
-# pylint: disable=too-many-instance-attributes,too-many-locals
-# pylint: disable=too-many-statements,no-member
 class ExerciseMixin:
 
     """
@@ -41,6 +39,8 @@ class ExerciseMixin:
 
         ExerciseMixin.create_widgets(self)
 
+    # FIXME: split up into multiple functions/classes
+    # pylint: disable=too-many-locals,too-many-statements
     def create_tab(self, exercise: str) -> None:
         """Populate exercise tab."""
         tab = ttk.Frame(self.__notebook)
@@ -69,7 +69,7 @@ class ExerciseMixin:
             orient=tk.HORIZONTAL)
         bpm.set(140)
         if 'tempo' not in config:
-            bpm.state(('disabled',))
+            bpm.configure(state=tk.DISABLED)
         self.__tabs[tab_num]['bpm'] = bpm
         bpm.grid(column=3, row=0, sticky=tk.W+tk.N)
 
@@ -120,7 +120,7 @@ class ExerciseMixin:
             command=lambda _: asyncio.ensure_future(
                 ExerciseMixin.update_sheet(self)))
         if 'sound' not in config:
-            sound.state(('disabled',))
+            sound.configure(state=tk.DISABLED)
         self.__tabs[tab_num]['sound_menu'] = sound
         sound.grid(column=2, row=0, sticky=tk.W+tk.N)
 
@@ -136,7 +136,7 @@ class ExerciseMixin:
             textvar.set(config['key'])
         else:
             textvar.set('c')
-            curr_pitch.state(('disabled',))
+            curr_pitch.configure(state=tk.DISABLED)
         self.__tabs[tab_num]['pitch_menu'] = curr_pitch
         curr_pitch.grid(column=3, row=0, sticky=tk.W+tk.N)
 
@@ -275,8 +275,11 @@ class ExerciseMixin:
                 data[tab_name]['autonext'])
             self.__tabs[i]['random'].set(data[tab_name]['random'])
 
+    # FIXME: remove this entirely once preemptive compiling is implemented
     async def recompile(self):
         """Recompile all exercises."""
+        # pylint: disable=no-member
+        # mixin doesn't have this
         self.compiler_count += 1
         self.update_compiler()
         log = await compile_all(self.__data_path, self.include_path)
@@ -394,8 +397,6 @@ class ExerciseMixin:
         del self.__tabs[tab_num]
         file_name = Path(self.__data_path).joinpath(
             "{}.ly".format(tab_name))
-        # pylint: disable=no-member
-        # does too!
         file_name.unlink()
 
     async def clear_cache(self):
@@ -411,10 +412,13 @@ class ExerciseMixin:
         for i in range(len(self.__tabs)):
             await ExerciseMixin.update_sheet(self, tab_num=i)
 
+    # FIXME: move this to MainWindow
     async def update_sheet(self, tab_num=None):
         """Display relevant sheet."""
         if tab_num is None:
             tab_num = self.__num
+        # pylint: disable=invalid-name
+        # type declaration
         Size = namedtuple('Size', ['width', 'height'])
         size = Size(
             self.__tabs[tab_num]['sheet'].winfo_width(),

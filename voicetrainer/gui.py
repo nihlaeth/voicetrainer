@@ -19,13 +19,6 @@ from voicetrainer.song import SongMixin
 from voicetrainer.compile import compile_
 from voicetrainer.compile_interface import FileType, Interface
 
-# pylint: disable=too-many-instance-attributes,too-many-locals
-# pylint: disable=too-many-statements, too-many-public-methods, no-member
-# It's messy, but there simply too many references to keep alive.
-# pylint: disable=broad-except,bad-continuation
-# because of asyncio exceptions are only displayed at exit, we
-# want to give the user immediate feedback.
-
 class MainWindow(ExerciseMixin, SongMixin):
 
     """Voicetrainer application."""
@@ -81,6 +74,9 @@ class MainWindow(ExerciseMixin, SongMixin):
 
     async def select_port(self, pmidi=True):
         """Change port matching."""
+        # FIXME: stay away from private mixin properties
+        # pylint: disable=access-member-before-definition,invalid-name
+        # pylint: disable=attribute-defined-outside-init
         selection_dialog = PortSelection(
             self.root,
             data=await list_ports(pmidi=pmidi),
@@ -207,6 +203,8 @@ class MainWindow(ExerciseMixin, SongMixin):
         self.data_path.joinpath('state.json').write_text(
             json.dumps(data))
 
+    # FIXME: rename mixin restore_state methods
+    # pylint: disable=arguments-differ
     def restore_state(self):
         """Restore saved settings."""
         state_file = self.data_path.joinpath('state.json')
