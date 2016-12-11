@@ -38,7 +38,6 @@ voicetrainer
 * set sane defaults for pylint
 
 ## Problems
-* jpmidi transport does not reset to 0
 
 ## Planned features
 * add command line script to compile / edit midi

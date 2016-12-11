@@ -120,11 +120,16 @@ async def play_midi(
         if port in line:
             port_num = line[0:line.index(')')]
     if port_num is None:
-        return
+        error_cb("no port match found for {}".format(port))
+        await stop_midi(proc)
+        ensure_future(exec_on_midi_end(proc, on_midi_end, port))
+        return proc
     await _write_stdin(proc.stdin, 'connect {}'.format(port_num))
 
     # play if await_jack is False
     if not await_jack:
+        await _read_stdout(proc.stdout)
+        await _write_stdin(proc.stdin, 'locate 0')
         await _read_stdout(proc.stdout)
         await _write_stdin(proc.stdin, 'play')
 
