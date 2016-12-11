@@ -36,10 +36,19 @@ voicetrainer
 * make release and publish
 * have scroll wheel scroll scrollbars
 * set sane defaults for pylint
+* display natural tempo and key
+* make measure selector scale
+* exercise next should look at enabled features
+* make repeat_once exercise specific
+* refactor: make sure method do not rely on currently active tab
 
 ## Problems
+* jpmidi: sustain weirdness
+* play/stop buttons don't reflect play status after tab switch
 
 ## Planned features
 * add command line script to compile / edit midi
 * compile exercise before it's started
 * midi mixer settings
+* solfege tab
+* click in for songs
