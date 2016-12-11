@@ -10,6 +10,7 @@ setup(
     python_requires='>=3.5.2',
     packages=find_packages(),
     install_requires=['pillow'],
+    package_data={'voicetrainer': ['reset.midi']},
     entry_points={
         'gui_scripts': [
             'voicetrainer = voicetrainer.gui:start']})

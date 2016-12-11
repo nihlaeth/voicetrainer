@@ -4,7 +4,6 @@ import tkinter as tk
 import asyncio
 from pathlib import Path
 from itertools import product, chain
-from functools import partial
 from collections import namedtuple
 from random import choice
 
@@ -14,9 +13,7 @@ from voicetrainer.aiotk import (
     OkCancelDialog,
     SaveFileDialog,
     LoadFileDialog)
-from voicetrainer.play import (
-    play_midi,
-    exec_on_midi_end)
+from voicetrainer.play import play_midi
 from voicetrainer.compile import compile_all
 from voicetrainer.compile_interface import FileType, Exercise
 
@@ -513,16 +510,16 @@ class ExerciseMixin:
         # reserve player
         self.player = "..."
         try:
-            self.player = await play_midi(self.port, midi)
+            self.player = await play_midi(
+                self.port,
+                midi,
+                on_midi_end=lambda: ExerciseMixin.on_midi_stop(self))
         except Exception as err:
             ErrorDialog(
                 self.root,
                 data="Could not start midi playback\n{}".format(str(err)))
             raise
         self.__tabs[self.__num]['play_stop'].set("stop")
-        asyncio.ensure_future(exec_on_midi_end(
-            self.player,
-            partial(ExerciseMixin.on_midi_stop, self)))
 
     async def on_midi_stop(self):
         """Handle end of midi playback."""

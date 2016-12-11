@@ -30,14 +30,14 @@ voicetrainer
 ```
 
 ## Todo
-* tweak pmidi settings (shorter sleep after midi end)
 * document song feature and lily settings
 * document jpmidi and jack transport use
 * refactor export to be in MainWindow and file menu
 * add reset button for songs
-* reset midi after stopping or killing playback
 * make release and publish
 * have scroll wheel scroll scrollbars
+* lower min_bpm for songs
+* set self.stopping at player stop in quit
 
 ## Problems
 * jpmidi transport does not reset to 0

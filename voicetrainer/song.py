@@ -1,10 +1,9 @@
 """All the song stuff."""
-from tkinter import ttk
+from tkinter import ttk 
 import tkinter as tk
 import asyncio
 from pathlib import Path
 from itertools import product, chain
-from functools import partial
 from collections import namedtuple
 from datetime import datetime
 
@@ -14,9 +13,7 @@ from voicetrainer.aiotk import (
     OkCancelDialog,
     SaveFileDialog,
     LoadFileDialog)
-from voicetrainer.play import (
-    play_midi,
-    exec_on_midi_end)
+from voicetrainer.play import play_midi
 from voicetrainer.compile_interface import FileType, Song
 
 # pylint: disable=too-many-instance-attributes,no-member
@@ -453,7 +450,7 @@ class SongMixin:
         for file_ in chain(
                 self.__data_path.glob("{}*.midi".format(tab_name)),
                 self.__data_path.glob("{}*.png".format(tab_name)),
-                self.__data_path.glob("{}*.pdf".format(tab_name))):
+               self.__data_path.glob("{}*.pdf".format(tab_name))):
             file_.unlink()
 
         # display fresh sheets
@@ -563,11 +560,15 @@ class SongMixin:
         self.player = "..."
         try:
             if self.__midi_executable.get() == 'pmidi':
-                self.player = await play_midi(self.port, midi)
+                self.player = await play_midi(
+                    self.port,
+                    midi,
+                    on_midi_end=lambda: SongMixin.on_midi_stop(self))
             else:
                 self.player = await play_midi(
                     self.__jpmidi_port,
                     midi,
+                    on_midi_end=lambda: SongMixin.on_midi_stop(self),
                     pmidi=False,
                     error_cb=self.new_message)
         except Exception as err:
@@ -576,9 +577,6 @@ class SongMixin:
                 data="Could not start midi playback\n{}".format(str(err)))
             raise
         self.__tabs[self.__num]['play_stop'].set("stop")
-        asyncio.ensure_future(exec_on_midi_end(
-            self.player,
-            partial(SongMixin.on_midi_stop, self)))
 
     async def on_midi_stop(self):
         """Handle end of midi playback."""

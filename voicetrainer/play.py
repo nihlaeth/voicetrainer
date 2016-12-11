@@ -3,6 +3,7 @@ from typing import Callable
 from pathlib import Path
 from asyncio import create_subprocess_exec, ensure_future
 from asyncio.subprocess import PIPE, Process
+from pkg_resources import resource_filename, Requirement, cleanup_resources
 
 # pylint: disable=too-many-branches
 async def list_ports(pmidi=True, err_cb=lambda err: print(err)) -> str:
@@ -98,13 +99,16 @@ async def _write_stdin(stdin, msg):
 async def play_midi(
         port: str,
         midi: Path,
+        on_midi_end,
         error_cb=lambda err: print(err),
         pmidi=True,
         await_jack=False) -> Process:
     """Start playing midi file."""
     if pmidi:
-        return await create_subprocess_exec(
-            'pmidi', '-p', port, str(midi))
+        proc = await create_subprocess_exec(
+            'pmidi', '-p', port, '-d', '0', str(midi))
+        ensure_future(exec_on_midi_end(proc, on_midi_end, port))
+        return proc
     proc = await create_subprocess_exec(
         'jpmidi', str(midi), stdin=PIPE, stdout=PIPE, stderr=PIPE)
     ensure_future(_read_stderr(proc.stderr, error_cb))
@@ -123,6 +127,8 @@ async def play_midi(
     if not await_jack:
         await _read_stdout(proc.stdout)
         await _write_stdin(proc.stdin, 'play')
+
+    ensure_future(exec_on_midi_end(proc, on_midi_end, port))
     return proc
 
 async def stop_midi(proc: Process) -> None:
@@ -137,8 +143,21 @@ async def stop_midi(proc: Process) -> None:
         # consume any last output
         await proc.stdout.read()
 
-async def exec_on_midi_end(proc: Process, func: Callable) -> int:
+async def exec_on_midi_end(proc: Process, func: Callable, port: str) -> int:
     """Exec func when midi stops playing."""
     return_code = await proc.wait()
+
+    if proc.stdout is None:
+        reset_proc = await create_subprocess_exec(
+            'pmidi',
+            '-p',
+            port,
+            '-d',
+            '0',
+            resource_filename(
+                Requirement.parse("voicetrainer"),
+                'voicetrainer/reset.midi'))
+        await reset_proc.wait()
+        cleanup_resources()
     await func()
     return return_code
