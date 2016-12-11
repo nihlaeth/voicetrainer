@@ -187,6 +187,7 @@ class MainWindow(ExerciseMixin, SongMixin):
             if not await confirm_exit.await_data():
                 return
         if self.player is not None:
+            self.stopping = True
             await self.stop()
         self.close()
 

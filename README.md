@@ -37,7 +37,7 @@ voicetrainer
 * make release and publish
 * have scroll wheel scroll scrollbars
 * lower min_bpm for songs
-* set self.stopping at player stop in quit
+* set sane defaults for pylint
 
 ## Problems
 * jpmidi transport does not reset to 0
