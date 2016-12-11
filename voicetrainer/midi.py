@@ -17,8 +17,8 @@
 #-------------------------------------------------------------------------------
 '''
 Objects and tools for processing MIDI data.  Converts from MIDI files to
-:class:`~music21.midi.MidiEvent`, :class:`~music21.midi.MidiTrack`, and
-:class:`~music21.midi.MidiFile` objects, and vice-versa.
+:class:`~MidiEvent`, :class:`~MidiTrack`, and
+:class:`~MidiFile` objects, and vice-versa.
 This module uses routines from Will Ware's public domain midi.py library from 2001
 see http://groups.google.com/group/alt.sources/msg/0c5fc523e050c35e
 '''
@@ -186,15 +186,17 @@ def get_variable_length_number(midi_str):
     (45, ...'E')
     >>> get_variable_length_number('E')
     (69, ...'')
+
     Test that variable length characters work:
     >>> get_variable_length_number(b'\xff\x7f')
     (16383, ...'')
     >>> get_variable_length_number('中xy')
     (210638584, ...'y')
+
     If no low-byte character is encoded, raises an IndexError
     >>> get_variable_length_number('中国')
     Traceback (most recent call last):
-    IndexError: ...index out of range
+    MidiException: did not find the end of the number!
     '''
     # from http://faydoc.tripod.com/formats/mid.htm
     # This allows the number to be read one byte at a time, and when you see
@@ -208,8 +210,10 @@ def get_variable_length_number(midi_str):
             byte = ord(byte)
         summation = (summation << 7) + (byte & 0x7F)
         if not byte & 0x80:
-            # FIXME: avoid index error
-            return summation, midi_str[i+1:]
+            try:
+                return summation, midi_str[i+1:]
+            except IndexError:
+                break
     raise MidiException('did not find the end of the number!')
 
 def get_numbers_as_list(midi_str):
@@ -262,7 +266,7 @@ def put_variable_length_number(num):
     b'\\xff\\x7f'
     >>> put_variable_length_number(-1)
     Traceback (most recent call last):
-    music21.midi.MidiException: cannot put_variable_length_number() when number is negative: -1
+    MidiException: cannot put_variable_length_number() when number is negative: -1
     '''
     if num < 0:
         raise MidiException(
@@ -284,15 +288,17 @@ def put_numbers_as_list(num_list):
 
     >>> put_numbers_as_list([0, 0, 0, 3])
     b'\\x00\\x00\\x00\\x03'
+
     If a number is < 0 then it wraps around from the top.
     >>> put_numbers_as_list([0, 0, 0, -3])
     b'\\x00\\x00\\x00\\xfd'
     >>> put_numbers_as_list([0, 0, 0, -1])
     b'\\x00\\x00\\x00\\xff'
+
     A number > 255 is an exception:
     >>> put_numbers_as_list([256])
     Traceback (most recent call last):
-    music21.midi.MidiException: Cannot place a number > 255 in a list: 256
+    MidiException: Cannot place a number > 255 in a list: 256
     '''
     post = bytearray()
     for num in num_list:
@@ -411,15 +417,15 @@ class MidiEvent(object):
     '''
     A model of a MIDI event, including note-on, note-off, program change,
     controller change, any many others.
-    MidiEvent objects are paired (preceded) by :class:`~music21.midi.base.DeltaTime`
+    MidiEvent objects are paired (preceded) by :class:`~base.DeltaTime`
     objects in the list of events in a MidiTrack object.
-    The `track` argument must be a :class:`~music21.midi.base.MidiTrack` object.
+    The `track` argument must be a :class:`~base.MidiTrack` object.
     The `type_` attribute is a string representation of a Midi event from the CHANNEL_VOICE_MESSAGES
     or META_EVENTS definitions.
     The `channel` attribute is an integer channel id, from 1 to 16.
     The `time` attribute is an integer duration of the event in ticks. This value
     can be zero. This value is not essential, as ultimate time positioning is
-    determined by :class:`~music21.midi.base.DeltaTime` objects.
+    determined by :class:`~base.DeltaTime` objects.
     The `pitch` attribute is only defined for note-on and note-off messages.
     The attribute stores an integer representation (0-127, with 60 = middle C).
     The `velocity` attribute is only defined for note-on and note-off messages.
@@ -428,8 +434,8 @@ class MidiEvent(object):
     The `data` attribute is used for storing other messages,
     such as SEQUENCE_TRACK_NAME string values.
 
-    >>> mt = midi.MidiTrack(1)
-    >>> me1 = midi.MidiEvent(mt)
+    >>> mt = MidiTrack(1)
+    >>> me1 = MidiEvent(mt)
     >>> me1.type_ = "NOTE_ON"
     >>> me1.channel = 3
     >>> me1.time = 200
@@ -437,7 +443,7 @@ class MidiEvent(object):
     >>> me1.velocity = 120
     >>> me1
     <MidiEvent NOTE_ON, t=200, track=1, channel=3, pitch=60, velocity=120>
-    >>> me2 = midi.MidiEvent(mt)
+    >>> me2 = MidiEvent(mt)
     >>> me2.type_ = "SEQUENCE_TRACK_NAME"
     >>> me2.time = 0
     >>> me2.data = 'guitar'
@@ -538,8 +544,8 @@ class MidiEvent(object):
 
         The `bend_range` parameter gives the number of half steps in the bend range.
 
-        >>> mt = midi.MidiTrack(1)
-        >>> me1 = midi.MidiEvent(mt)
+        >>> mt = MidiTrack(1)
+        >>> me1 = MidiEvent(mt)
         >>> me1.set_pitch_bend(50)
         >>> me1._parameter1, me1._parameter2
         (0, 80)
@@ -590,12 +596,12 @@ class MidiEvent(object):
     def _parse_channel_voice_message(self, midi_str):
         '''
 
-        >>> mt = midi.MidiTrack(1)
-        >>> me1 = midi.MidiEvent(mt)
-        >>> remainder = me1._parse_channel_voice_message(midi.ints_to_hex_string([144, 60, 120]))
+        >>> mt = MidiTrack(1)
+        >>> me1 = MidiEvent(mt)
+        >>> remainder = me1._parse_channel_voice_message(ints_to_hex_string([144, 60, 120]))
         >>> me1.channel
         1
-        >>> remainder = me1._parse_channel_voice_message(midi.ints_to_hex_string([145, 60, 120]))
+        >>> remainder = me1._parse_channel_voice_message(ints_to_hex_string([145, 60, 120]))
         >>> me1.channel
         2
         >>> me1.type_
@@ -813,34 +819,32 @@ class MidiEvent(object):
     #---------------------------------------------------------------------------
     def is_note_on(self):
         '''
-        return a boolean if this is a note_on message and velocity is not zero_
+        return a boolean if this is a NOTE_ON message and velocity is not zero_
 
-        >>> mt = midi_midi_track(1)
-        >>> me1 = midi_midi_event(mt)
-        >>> me1_type = "note_on"
-        >>> me1_velocity = 120
-        >>> me1_is_note_on()
-        true
-        >>> me1_is_note_off()
-        false
+        >>> mt = MidiTrack(1)
+        >>> me1 = MidiEvent(mt)
+        >>> me1.type_ = "NOTE_ON"
+        >>> me1.velocity = 120
+        >>> me1.is_note_on()
+        True
+        >>> me1.is_note_off()
+        False
         '''
-        if self.type_ == "NOTE_ON" and self.velocity != 0:
-            return True
-        return False
+        return self.type_ == "NOTE_ON" and self.velocity != 0
 
     def is_note_off(self):
         '''
         Return a boolean if this is should be interpreted as a note-off message,
         either as a real note-off or as a note-on with zero velocity.
 
-        >>> mt = midi.MidiTrack(1)
-        >>> me1 = midi.MidiEvent(mt)
+        >>> mt = MidiTrack(1)
+        >>> me1 = MidiEvent(mt)
         >>> me1.type_ = "NOTE_OFF"
         >>> me1.is_note_on()
         False
         >>> me1.is_note_off()
         True
-        >>> me2 = midi.MidiEvent(mt)
+        >>> me2 = MidiEvent(mt)
         >>> me2.type_ = "NOTE_ON"
         >>> me2.velocity = 0
         >>> me2.is_note_on()
@@ -858,8 +862,8 @@ class MidiEvent(object):
         '''
         Return a boolean if this is a DeltaTime subclass.
 
-        >>> mt = midi.MidiTrack(1)
-        >>> dt = midi.DeltaTime(mt)
+        >>> mt = MidiTrack(1)
+        >>> dt = DeltaTime(mt)
         >>> dt.is_delta_time()
         True
         '''
@@ -874,12 +878,12 @@ class MidiEvent(object):
         is a NOTE_ON message, and the other is a NOTE_OFF message
         for this pitch on this channel.  Otherwise returns False
 
-        >>> mt = midi.MidiTrack(1)
-        >>> me1 = midi.MidiEvent(mt)
+        >>> mt = MidiTrack(1)
+        >>> me1 = MidiEvent(mt)
         >>> me1.type_ = "NOTE_ON"
         >>> me1.velocity = 120
         >>> me1.pitch = 60
-        >>> me2 = midi.MidiEvent(mt)
+        >>> me2 = MidiEvent(mt)
         >>> me2.type_ = "NOTE_ON"
         >>> me2.velocity = 0
         >>> me2.pitch = 60
@@ -894,7 +898,6 @@ class MidiEvent(object):
         >>> me2.pitch = 60
         >>> me1.matched_note_off(me2)
         True
-
         >>> me2.channel = 12
         >>> me1.matched_note_off(me2)
         False
@@ -907,16 +910,16 @@ class MidiEvent(object):
 
 class DeltaTime(MidiEvent):
     '''
-    A :class:`~music21.midi.base.MidiEvent` subclass that stores the
+    A :class:`~base.MidiEvent` subclass that stores the
     time change (in ticks) since the start or since the last MidiEvent.
     Pairs of DeltaTime and MidiEvent objects are the basic presentation of temporal data.
-    The `track` argument must be a :class:`~music21.midi.base.MidiTrack` object.
+    The `track` argument must be a :class:`~base.MidiTrack` object.
     Time values are in integers, representing ticks.
     The `channel` attribute, inherited from MidiEvent is not used and set to None
     unless overridden (don't!).
 
-    >>> mt = midi.MidiTrack(1)
-    >>> dt = midi.DeltaTime(mt)
+    >>> mt = MidiTrack(1)
+    >>> dt = DeltaTime(mt)
     >>> dt.time = 380
     >>> dt
     <MidiEvent DeltaTime, t=380, track=1, channel=None>
@@ -936,12 +939,12 @@ class DeltaTime(MidiEvent):
 class MidiTrack(object):
     '''
     A MIDI Track. Each track contains a list of
-    :class:`~music21.midi.base.MidiChannel` objects, one for each channel.
+    :class:`~base.MidiChannel` objects, one for each channel.
     All events are stored in the `events` list, in order.
     An `index` is an integer identifier for this object.
     TODO: Better Docs
 
-    >>> mt = midi.MidiTrack(0)
+    >>> mt = MidiTrack(0)
 
     '''
     def __init__(self, index):
@@ -954,8 +957,8 @@ class MidiTrack(object):
         Read as much of the string (representing midi data) as necessary;
         return the remaining string for reassignment and further processing.
         The string should begin with `MTrk`, specifying a Midi Track
-        Creates and stores :class:`~music21.midi.base.DeltaTime`
-        and :class:`~music21.midi.base.MidiEvent` objects.
+        Creates and stores :class:`~base.DeltaTime`
+        and :class:`~base.MidiEvent` objects.
         '''
         time = 0 # a running counter of ticks
 
@@ -1098,9 +1101,9 @@ class MidiFile(object):
 
     def open_file_like(self, file_like):
         '''Assign a file-like object, such as those provided by StringIO, as an open file object.
-        >>> from music21.ext.six import StringIO
+        >>> from io import StringIO
         >>> fileLikeOpen = StringIO()
-        >>> mf = midi.MidiFile()
+        >>> mf = MidiFile()
         >>> mf.open_file_like(fileLikeOpen)
         >>> mf.close()
         '''
@@ -1196,4 +1199,4 @@ class MidiFile(object):
 
 if __name__ == "__main__":
     import doctest
-    doctest.testmod()
+    doctest.testmod(optionflags=doctest.ELLIPSIS)
