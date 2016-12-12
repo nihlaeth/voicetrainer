@@ -1,13 +1,28 @@
 """Compile lily code into png and midi."""
-from typing import List, Tuple
+from typing import Dict, Tuple, Callable
 from pathlib import Path
-from itertools import product
 from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
 
+from PIL import Image, ImageTk
+
 from voicetrainer.midi import (
     MidiFile, MidiTrack, DeltaTime, MidiEvent, get_numbers_as_list)
-from voicetrainer.compile_interface import FileType, Interface, Exercise
+from voicetrainer.compile_interface import FileType, Interface
+
+# some state
+_ERR_CB = print
+_COMPILER_CB = None
+
+def set_err_cb(err_cb: Callable[[str], None]):
+    """Give module a way to report errors."""
+    global _ERR_CB
+    _ERR_CB = err_cb
+
+def set_compiler_cb(compiler_cb: Callable[[int], None]):
+    """Call compiler_cb with 1 or -1 every time compiling starts or stops."""
+    global _COMPILER_CB
+    _COMPILER_CB = compiler_cb
 
 def measure_to_tick(time_changes, measure, ticks_per_quarter_note):
     """Convert measure to tick."""
@@ -56,8 +71,9 @@ def get_measure_num(time_changes, total_ticks, ticks_per_quarter_note):
         measure += delta_measure
     return measure
 
-async def compile_(interface: Interface, file_type: FileType) -> Tuple[str, str]:
+async def compile_(interface: Interface, file_type: FileType) -> None:
     """Open interface file, format, and compile with lilypond."""
+    _COMPILER_CB(1)
     proc = await create_subprocess_exec(
         *interface.get_lilypond_options(file_type),
         stdin=PIPE,
@@ -68,7 +84,11 @@ async def compile_(interface: Interface, file_type: FileType) -> Tuple[str, str]
     if file_type is FileType.midi and \
             (interface.start_measure > 1 or interface.velocity != 0):
         await create_clipped_midi(interface)
-    return (bytes.decode(outs), bytes.decode(errs))
+    _COMPILER_CB(1)
+    if len(outs) > 0:
+        _ERR_CB(bytes.decode(outs))
+    if len(errs) > 0:
+        _ERR_CB(bytes.decode(errs))
 
 def midi_generator(midi: MidiFile) -> Tuple[int, DeltaTime, MidiEvent]:
     """Iterate over midi events."""
@@ -177,25 +197,41 @@ async def create_clipped_midi(interface: Interface):
     new_midi.write()
     new_midi.close()
 
-async  def compile_all(path: Path, include_path: Path) -> List[Tuple[str, str]]:
-    """Compile all exercises."""
-    if not path.is_dir():
-        raise Exception('{} is not a directory'.format(path))
-    log = []
-    for file_name in path.glob('*.ly'):
-        variables = product(
-            [FileType.midi, FileType.png],
-            [note + octave for note, octave in product(
-                list("cdefg"), [",", "", "'"])],
-            [i*10 for i in range(8, 17)],
-            ["Mi", "Na", "Noe", "Nu", "No"])
-        for combo in variables:
-            exercise = Exercise(
-                path,
-                include_path,
-                name=file_name.stem,
-                pitch=combo[1],
-                bpm=combo[2],
-                sound=combo[3])
-            log.append(await compile_(exercise, combo[0]))
-    return log
+async def get_single_sheet(
+        image_cache: Dict,
+        interface: Interface,
+        max_width: int,
+        max_height: int) -> Path:
+    """Fetch and size sheet while preserving ratio."""
+    png = await get_file(interface)
+    if png not in image_cache:
+        image_cache[png] = {}
+        image_cache[png]['original'] = Image.open(str(png))
+    original = image_cache[png]['original']
+    if max_width < 1:
+        max_width = 1
+    if max_height < 1:
+        max_height = 1
+    width_ratio = float(original.width) / float(max_width)
+    height_ratio = float(original.height) / float(max_height)
+    ratio = max([width_ratio, height_ratio])
+    size = (int(original.width / ratio), int(original.height / ratio))
+    if size[0] == 0 or size[1] == 0:
+        size = (1, 1)
+    image_cache[png]['resized'] = \
+        image_cache[png]['original'].resize(size, Image.ANTIALIAS)
+    image_cache[png]['image'] = ImageTk.PhotoImage(
+        image_cache[png]['resized'])
+    return png
+
+async def get_file(
+        interface: Interface,
+        file_type: FileType=FileType.png) -> Path:
+    """Assemble file_name, compile if non-existent."""
+    file_name = interface.get_filename(file_type)
+    # TODO: check for naming madness with pages
+    if not file_name.is_file():
+        await compile_(interface, file_type)
+    if not file_name.is_file():
+        _ERR_CB("could not compile {}".format(file_name))
+    return file_name

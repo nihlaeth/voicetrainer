@@ -5,8 +5,7 @@ import asyncio
 from pathlib import Path
 import json
 
-from PIL import Image, ImageTk
-
+from voicetrainer.compile import set_err_cb, set_compiler_cb
 from voicetrainer.aiotk import (
     Root,
     OkCancelDialog,
@@ -16,8 +15,6 @@ from voicetrainer.aiotk import (
 from voicetrainer.play import stop_midi, PortFinder, list_ports
 from voicetrainer.exercise import ExerciseMixin
 from voicetrainer.song import SongMixin
-from voicetrainer.compile import compile_
-from voicetrainer.compile_interface import FileType, Interface
 
 class MainWindow(ExerciseMixin, SongMixin):
 
@@ -32,10 +29,12 @@ class MainWindow(ExerciseMixin, SongMixin):
 
         # compiler state
         self.compiler_count = 0
+        set_compiler_cb(self.update_compiler)
 
         self.messages = []
         self.messages_read = 0
         self.msg_window = None
+        set_err_cb(self.new_message)
 
         # midi state
         self.port = None
@@ -47,7 +46,6 @@ class MainWindow(ExerciseMixin, SongMixin):
         self.repeat_once = False
 
         # gui elements storage
-        self.image_cache = {}
         self.create_widgets()
 
         ExerciseMixin.__init__(self)
@@ -203,9 +201,7 @@ class MainWindow(ExerciseMixin, SongMixin):
         self.data_path.joinpath('state.json').write_text(
             json.dumps(data))
 
-    # FIXME: rename mixin restore_state methods
-    # pylint: disable=arguments-differ
-    def restore_state(self):
+    def restore_state(self, _=None):
         """Restore saved settings."""
         state_file = self.data_path.joinpath('state.json')
         if not state_file.is_file():
@@ -246,69 +242,13 @@ class MainWindow(ExerciseMixin, SongMixin):
         """Messages window was closed."""
         self.msg_window = None
 
-    def update_compiler(self):
+    def update_compiler(self, delta_compilers: int):
         """Set compiler progress bar status."""
+        self.compiler_count += delta_compilers
         if self.compiler_count > 0:
             self.progress.start()
         else:
             self.progress.stop()
-
-    async def get_file(
-            self,
-            interface: Interface,
-            file_type: FileType=FileType.png) -> str:
-        """Assemble file_name, compile if non-existent."""
-        file_name = interface.get_filename(file_type)
-        if not file_name.is_file():
-            try:
-                self.compiler_count += 1
-                self.update_compiler()
-                log = await compile_(interface, file_type)
-                if len(log[0]) > 0:
-                    self.messages.append(log[0])
-                if len(log[1]) > 0:
-                    self.messages.append(log[1])
-                self.show_messages()
-            except Exception as err:
-                ErrorDialog(
-                    self.root,
-                    data="Could not compile exercise\n{}".format(str(err)))
-                raise
-            finally:
-                self.compiler_count -= 1
-                self.update_compiler()
-        if not file_name.is_file():
-            ErrorDialog(
-                self.root,
-                data="Could not compile {}".format(str(file_name)))
-        return file_name
-
-    async def get_single_sheet(
-            self,
-            interface: Interface,
-            max_width: int,
-            max_height: int):
-        """Fetch and size sheet while preserving ratio."""
-        png = await self.get_file(interface)
-        if png not in self.image_cache:
-            self.image_cache[png] = {}
-            self.image_cache[png]['original'] = Image.open(str(png))
-        original = self.image_cache[png]['original']
-        if max_width < 1:
-            max_width = 1
-        if max_height < 1:
-            max_height = 1
-        width_ratio = float(original.width) / float(max_width)
-        height_ratio = float(original.height) / float(max_height)
-        ratio = max([width_ratio, height_ratio])
-        size = (int(original.width / ratio), int(original.height / ratio))
-        if size[0] == 0 or size[1] == 0:
-            size = (1, 1)
-        self.image_cache[png]['resized'] = \
-            self.image_cache[png]['original'].resize(size, Image.ANTIALIAS)
-        self.image_cache[png]['image'] = ImageTk.PhotoImage(
-            self.image_cache[png]['resized'])
-        return png
 
     async def clear_cache(self):
         """Remove all compiled files."""
@@ -319,7 +259,6 @@ class MainWindow(ExerciseMixin, SongMixin):
         if not await confirm_remove.await_data():
             return
 
-        self.image_cache = {}
         await ExerciseMixin.clear_cache(self)
         await SongMixin.clear_cache(self)
 

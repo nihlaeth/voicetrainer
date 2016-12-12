@@ -13,6 +13,7 @@ from voicetrainer.aiotk import (
     SaveFileDialog,
     LoadFileDialog)
 from voicetrainer.play import play_midi
+from voicetrainer.compile import get_file, get_single_sheet
 from voicetrainer.compile_interface import FileType, Song
 from voicetrainer.gui_elements import (
     Notebook,
@@ -32,13 +33,11 @@ class SongTab:
     def __init__(
             self,
             notebook: Notebook,
-            song: Song,
-            data_path: Path,
-            include_path: Path):
-        self._data_path = data_path
-        self._include_path = include_path
+            song: Song):
         self.name = song.name
         config = song.config
+        self._data_path = song.data_path
+        self._include_path = song.include_path
         self.tab = Frame(notebook)
         self.tab.rowconfigure(0, weight=1)
         self.tab.columnconfigure(1, weight=1)
@@ -173,7 +172,7 @@ class SongTab:
         self.b_reset = Button(
             parent,
             text='Reset to song default',
-            command=lambda: self._reset_song())
+            command=self._reset_song)
         self.b_reset.grid(
             column=0, row=row_count, columnspan=2, sticky=tk.NSEW)
         row_count += 1
@@ -196,7 +195,7 @@ class SongTab:
         self.b_next_page = Button(
             parent,
             text='Next page',
-            command=lambda: self._change_page())
+            command=self._change_page)
         self.b_next_page.grid(
             column=0, row=row_count, columnspan=2, sticky=tk.NSEW)
         row_count += 1
@@ -233,7 +232,7 @@ class SongTab:
 
     def _reset_song(self):
         """Set song pitch and bpm to song default."""
-        config = self._get_interface(self).config
+        config = self._get_interface().config
         if 'key' in config:
             self.key.set(config['key'])
         if 'tempo' in config:
@@ -323,15 +322,14 @@ class SongTab:
         self.sheet.delete("right")
         left = self._get_interface()
         # make sure pages are compiled
-        # FIXME: put get_file in sensible place, have compiler
-        # module worry about compiler counts
-        await self.get_file(left)
+        await get_file(left)
         left.page = self.page
         if not left.get_filename(FileType.png).is_file():
             # page does not exists, roll around to 1
             self.page = 1
             left.page = 1
-        left_path = await self.get_single_sheet(
+        left_path = await get_single_sheet(
+            self._image_cache,
             left,
             (event.width - 1)/2,
             event.height)
@@ -345,7 +343,8 @@ class SongTab:
         right = self._get_interface()
         right.page = self.page + 1
         if right.get_filename(FileType.png).is_file():
-            right_path = await self.get_single_sheet(
+            right_path = await get_single_sheet(
+                self._image_cache,
                 right,
                 (event.width - 1)/2,
                 event.height)
@@ -356,10 +355,10 @@ class SongTab:
                 anchor=tk.NW,
                 tags="right")
 
-    async def on_pitch_change(self):
+    async def _on_pitch_change(self):
         """New pitch was picked by user or app."""
         asyncio.ensure_future(self._update_sheet())
-        await self.get_file(self._get_interface(self), FileType.midi)
+        await get_file(self._get_interface(), FileType.midi)
 
 class SongMixin:
 
