@@ -12,7 +12,7 @@ from voicetrainer.compile_interface import FileType, Interface
 
 # some state
 _ERR_CB = print
-_COMPILER_CB = None
+_COMPILER_CB = lambda _: None
 
 def set_err_cb(err_cb: Callable[[str], None]):
     """Give module a way to report errors."""
