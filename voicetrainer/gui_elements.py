@@ -12,6 +12,11 @@ class Widget:
     _text = None
     data_type = int
 
+    @property
+    def raw(self: Widget) -> tk.Widget:
+        """Tkinter does not accept our awesone widgets, a tk.Widget is called for."""
+        return self._widget
+
     def grid(self: Widget, *args, **kwargs):
         """Add widget to grid."""
         self._widget.grid(*args, **kwargs)
@@ -54,7 +59,6 @@ class ControlVarMixin:
         """Return widget value."""
         return self.data_type(self._variable.get())
 
-
 class TextMixin:
 
     """Control text displayed on labels and buttons."""
@@ -83,133 +87,19 @@ class TtkMixin:
         """Disable widget using state."""
         self._widget.state(('disabled',))
 
-class Scale(Widget, IntMixin, TkMixin):
+class SequenceMixin:
 
-    """Scale widget."""
+    """Methods for sequence types."""
 
-    def __init__(
-            self,
-            parent: tk.Widget,
-            length: int,
-            from_: int,
-            to: int,
-            tickinterval: int=10,
-            resolution: int=1,
-            showvalue=False,
-            orient: str=tk.VERTICAL,
-            default: int=1,
-            label: Optional[str]=None,
-            command: Optional[Callable[[tk.Event], None]]=None):
-        self._widget = tk.Scale(
-            parent,
-            from_=from_,
-            to=to,
-            tickinterval=tickinterval,
-            resolution=resolution,
-            length=length,
-            showvalue=showvalue,
-            orient=orient,
-            label=label,
-            command=command)
-        self.set(default)
-
-class OptionMenu(Widget, ControlVarMixin, TkMixin):
-
-    """OptionMenu widget."""
-
-    def __init__(
-            self: Widget,
-            parent: tk.Widget,
-            option_list: List[str],
-            default: str,
-            command: Optional[Callable[[tk.Event], None]]=None):
-        self.data_type = str
-        self._variable = tk.StringVar()
-        self._widget = tk.OptionMenu(
-            parent,
-            self._variable,
-            *option_list,
-            command=command)
-        self.set(default)
-
-class SpinBox(Widget, ControlVarMixin, TkMixin):
-
-    """SpinBox widget."""
-
-    def __init__(
-            self: Widget,
-            parent: tk.Widget,
-            width: int,
-            from_: int,
-            to: int,
-            increment: int=1,
-            default: Union[int, str]=1,
-            values: Optional[Tuple[str]]=None,
-            wrap: bool=False,
-            command: Optional[Callable[[tk.Event], None]]=None):
-        self._variable = tk.StringVar()
-        if values is None:
-            self.data_type = int
-            self._widget = tk.Spinbox(
-                parent,
-                width=width,
-                from_=from_,
-                to=to,
-                increment=increment,
-                textvariable=self.data_type,
-                wrap=wrap,
-                command=command)
-        else:
-            self.data_type = str
-            self._widget = tk.Spinbox(
-                parent,
-                width=width,
-                values=values,
-                textvariable=self.data_type,
-                wrap=wrap,
-                command=command)
-        self.set(default)
-
-class Listbox(Widget, TkMixin):
-
-    """Listbox widget."""
-
-    def __init__(
-            self: Widget,
-            parent: tk.Widget,
-            width: int,
-            values: Tuple[str],
-            selectmode: str=tk.MULTIPLE):
-        self._frame = ttk.Frame(parent)
-        self._frame.rowconfigure(0, weight=1)
-        self._frame.columnconfigure(0, weight=1)
-        self._scrollbar = tk.Scrollbar(self._frame, orient=tk.VERTICAL)
-        self._scrollbar.grid(row=0, column=1, sticky=tk.NSEW)
-        self._widget = tk.Listbox(
-            self._frame,
-            yscrollcommand=self._scrollbar.set,
-            width=width,
-            exportselection=False,
-            selectmode=selectmode)
-        self._scrollbar['command'] = self._widget.yview
-        self._widget.grid(row=0, column=1, sticky=tk.NSEW)
-        self._values = values
-        self._update_values()
-        self._frame.bind("<Button-4>", self._on_mouse_wheel)
-        self._frame.bind("<Button-5>", self._on_mouse_wheel)
-
-    def _on_mouse_wheel(self, event: tk.Event):
-        self._widget.yview_scroll(-1 if event.num == 5 else 1, tk.UNITS)
+    _values = None
 
     def __len__(self):
         return len(self._values)
 
-    def __getitem__(
-            self, key: Union[int, slice]) -> Union[str, List[str]]:
+    def __getitem__(self, key: Union[int, slice]) -> Any:
         return self._values[key]
 
-    def __setitem__(
-            self, key: Union[int, slice], value: Union[str, List[str]]):
+    def __setitem__(self, key: Union[int, slice], value: Any):
         self._values[key] = value
         self._update_values()
 
@@ -219,7 +109,7 @@ class Listbox(Widget, TkMixin):
     def __reversed__(self):
         return reversed(self._values)
 
-    def __contains__(self, item: str) -> bool:
+    def __contains__(self, item: Any) -> bool:
         return item in self._values
 
     def __add__(self, other):
@@ -292,6 +182,132 @@ class Listbox(Widget, TkMixin):
         self._values.sort(key, reverse)
         self._update_values()
 
+class Scale(Widget, IntMixin, TkMixin):
+
+    """Scale widget."""
+
+    def __init__(
+            self,
+            parent: Union[Widget, tk.Widget],
+            length: int,
+            from_: int,
+            to: int,
+            tickinterval: int=10,
+            resolution: int=1,
+            showvalue: bool=False,
+            orient: str=tk.VERTICAL,
+            default: int=1,
+            label: Optional[str]=None,
+            command: Optional[Callable[[tk.Event], None]]=None):
+        if isinstance(parent, Widget):
+            parent = parent.raw
+        self._widget = tk.Scale(
+            parent,
+            from_=from_,
+            to=to,
+            tickinterval=tickinterval,
+            resolution=resolution,
+            length=length,
+            showvalue=showvalue,
+            orient=orient,
+            label=label,
+            command=command)
+        self.set(default)
+
+class OptionMenu(Widget, ControlVarMixin, TkMixin):
+
+    """OptionMenu widget."""
+
+    def __init__(
+            self: Widget,
+            parent: Union[Widget, tk.Widget],
+            option_list: List[str],
+            default: str,
+            command: Optional[Callable[[tk.Event], None]]=None):
+        if isinstance(parent, Widget):
+            parent = parent.raw
+        self.data_type = str
+        self._variable = tk.StringVar()
+        self._widget = tk.OptionMenu(
+            parent,
+            self._variable,
+            *option_list,
+            command=command)
+        self.set(default)
+
+class Spinbox(Widget, ControlVarMixin, TkMixin):
+
+    """SpinBox widget."""
+
+    def __init__(
+            self: Widget,
+            parent: Union[Widget, tk.Widget],
+            width: int,
+            from_: int,
+            to: int,
+            increment: int=1,
+            default: Union[int, str]=1,
+            values: Optional[Tuple[str]]=None,
+            wrap: bool=False,
+            command: Optional[Callable[[tk.Event], None]]=None):
+        if isinstance(parent, Widget):
+            parent = parent.raw
+        self._variable = tk.StringVar()
+        if values is None:
+            self.data_type = int
+            self._widget = tk.Spinbox(
+                parent,
+                width=width,
+                from_=from_,
+                to=to,
+                increment=increment,
+                textvariable=self.data_type,
+                wrap=wrap,
+                command=command)
+        else:
+            self.data_type = str
+            self._widget = tk.Spinbox(
+                parent,
+                width=width,
+                values=values,
+                textvariable=self.data_type,
+                wrap=wrap,
+                command=command)
+        self.set(default)
+
+class Listbox(Widget, SequenceMixin, TkMixin):
+
+    """Listbox widget."""
+
+    def __init__(
+            self: Widget,
+            parent: Union[Widget, tk.Widget],
+            width: int,
+            values: Tuple[str],
+            selectmode: str=tk.MULTIPLE):
+        if isinstance(parent, Widget):
+            parent = parent.raw
+        self._frame = ttk.Frame(parent)
+        self._frame.rowconfigure(0, weight=1)
+        self._frame.columnconfigure(0, weight=1)
+        self._scrollbar = tk.Scrollbar(self._frame, orient=tk.VERTICAL)
+        self._scrollbar.grid(row=0, column=1, sticky=tk.NSEW)
+        self._widget = tk.Listbox(
+            self._frame,
+            yscrollcommand=self._scrollbar.set,
+            width=width,
+            exportselection=False,
+            selectmode=selectmode)
+        self._scrollbar['command'] = self._widget.yview
+        self._widget.grid(row=0, column=1, sticky=tk.NSEW)
+        self._values = values
+        self._update_values()
+        self._frame.bind("<Button-4>", self._on_mouse_wheel)
+        self._frame.bind("<Button-5>", self._on_mouse_wheel)
+
+    def _on_mouse_wheel(self, event: tk.Event):
+        self._widget.yview_scroll(-1 if event.num == 5 else 1, tk.UNITS)
+
     def _update_values(self):
         selection = self.get()
         if self._widget.size() > 0:
@@ -323,10 +339,12 @@ class Checkbutton(Widget, ControlVarMixin, TextMixin, TtkMixin):
 
     def __init__(
             self: Widget,
-            parent: tk.Widget,
+            parent: Union[Widget, tk.Widget],
             text: str,
             default: bool=False,
             command: Optional[Callable[[tk.Event], None]]=None):
+        if isinstance(parent, Widget):
+            parent = parent.raw
         self.data_type = bool
         self._variable = tk.IntVar()
         self._text = tk.StringVar()
@@ -344,9 +362,11 @@ class Button(Widget, TextMixin, TtkMixin):
 
     def __init__(
             self: Widget,
-            parent: tk.Widget,
+            parent: Union[Widget, tk.Widget],
             text: str,
             command: Optional[Callable[[], None]]=None):
+        if isinstance(parent, Widget):
+            parent = parent.raw
         self._text = tk.StringVar()
         self._widget = ttk.Button(
             parent,
@@ -360,10 +380,91 @@ class Label(Widget, TextMixin, TtkMixin):
 
     def __init__(
             self: Widget,
-            parent: tk.Widget,
+            parent: Union[Widget, tk.Widget],
             text: str):
+        if isinstance(parent, Widget):
+            parent = parent.raw
         self._text = tk.StringVar()
         self._widget = ttk.Label(
             parent,
             textvariable=self._text)
         self.set_text(text)
+
+class Frame(Widget, TtkMixin):
+
+    """Frame widget."""
+
+    def __init__(
+            self: Widget,
+            parent: Union[Widget, tk.Widget]):
+        if isinstance(parent, Widget):
+            parent = parent.raw
+        self._widget = ttk.Frame(parent)
+
+class LabelFrame(Widget, TextMixin, TtkMixin):
+
+    """Label widget."""
+
+    def __init__(
+            self: Widget,
+            parent: Union[Widget, tk.Widget],
+            text: str):
+        if isinstance(parent, Widget):
+            parent = parent.raw
+        self._text = Label(parent, text=text)
+        self._widget = ttk.LabelFrame(
+            parent,
+            labelwidget=self._text.raw)
+        self.set_text(text)
+
+
+class Notebook(Widget, SequenceMixin, TtkMixin):
+
+    """
+    Notebook widget.
+
+    Is sequence. Tab data in the form of:
+        {'name': str, 'widget': Union[tk.Widget, Widged]}
+    """
+
+    def __init__(
+            self: Widget,
+            parent: Union[Widget, tk.Widget]):
+        if isinstance(parent, Widget):
+            parent = parent.raw
+        self._widget = ttk.Notebook(parent)
+        self._values = []
+
+    def _get_tabs(self) -> List[str]:
+        return [
+            self._widget.tab(tab_id)['text'] for tab_id in self._widget.tabs()]
+
+    def _update_values(self):
+        """Sync list in self._values with notebook tabs."""
+        for i, tab_data in enumerate(self._values):
+            tabs = self._get_tabs()
+            if tab_data['tab_name'] != tabs[i]:
+                if isinstance(tab_data['widget'], Widget):
+                    widget = tab_data['widget'].raw
+                else:
+                    widget = tab_data['widget']
+                self._widget.insert(
+                    i, widget, text=tab_data['tab_name'])
+        if len(self._values) == len(self._widget.tabs()):
+            return
+        # now delete all tabs not in self._values
+        # we can just cut off the end, since we just made sure
+        # the first part matches self._values
+        for index in range(len(self._values), len(self._widget.tabs())):
+            self._widget.forget(index)
+
+    def get(self) -> Tuple[int, str]:
+        """Return index and name on active tab."""
+        tab_id = self._widget.select()
+        return (
+            self._widget.index(tab_id), self._widget.tab(tab_id)['text'])
+
+    def set(self, value: str):
+        """Set active tab."""
+        index = self._get_tabs().index(value)
+        self._widget.select(index)
