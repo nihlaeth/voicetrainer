@@ -2,7 +2,7 @@
 import tkinter as tk
 import asyncio
 from pathlib import Path
-from itertools import product, chain
+from itertools import chain
 from collections import namedtuple
 from datetime import datetime
 
@@ -10,6 +10,7 @@ from voicetrainer.aiotk import (
     ErrorDialog,
     OkCancelDialog,
     LoadFileDialog)
+from voicetrainer.common import PITCH_LIST
 from voicetrainer.play import play_or_stop
 from voicetrainer.compile import get_file, get_single_sheet
 from voicetrainer.compile_interface import FileType, Song
@@ -118,14 +119,11 @@ class SongTab:
             self.bpm.disable()
         row_count += 1
 
-        pitch_list = [note + octave for octave, note in product(
-            [',', '', '\''],
-            list("cdefgab"))]
         self.key_label = Label(parent, text="key:")
         self.key_label.grid(column=0, row=row_count, sticky=tk.N+tk.E)
         self.key = OptionMenu(
             parent,
-            option_list=pitch_list,
+            option_list=PITCH_LIST,
             default='c',
             command=lambda _: asyncio.ensure_future(
                 self._on_pitch_change()))
@@ -456,7 +454,7 @@ class SongMixin:
                 Song(
                     data_path=self.__data_path,
                     include_path=self.include_path,
-                    name=song))
+                    name=song.stem))
 
     def save_state(self):
         """Return exercise state."""
