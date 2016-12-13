@@ -2,11 +2,33 @@
 from typing import Callable
 from itertools import filterfalse
 from pathlib import Path
-from asyncio import create_subprocess_exec, ensure_future
+from asyncio import create_subprocess_exec, ensure_future, Lock
 from asyncio.subprocess import PIPE, Process
 from pkg_resources import resource_filename, Requirement, cleanup_resources
 
-async def list_ports(pmidi=True, err_cb=print) -> str:
+# some state
+_ERR_CB = print
+_PROC_LOCK = Lock()
+_PROC = None
+_PMIDI_PORT = None
+_JPMIDI_PORT = None
+
+def set_err_cb(err_cb: Callable[[str], None]):
+    """Give module a way to report errors."""
+    global _ERR_CB  # pylint: disable=global-statement
+    _ERR_CB = err_cb
+
+def set_pmidi_port(port: str):
+    """Set pmidi port string."""
+    global _PMIDI_PORT  # pylint: disable=global-statement
+    _PMIDI_PORT = port
+
+def set_jpmidi_port(port: str):
+    """Set jpmidi port string."""
+    global _JPMIDI_PORT  # pylint: disable=global-statement
+    _JPMIDI_PORT = port
+
+async def list_ports(pmidi=True) -> str:
     """List pmidi ports."""
     if pmidi:
         cmd = 'pmidi'
@@ -18,7 +40,7 @@ async def list_ports(pmidi=True, err_cb=print) -> str:
         cmd, options, stdout=PIPE, stderr=PIPE)
     output, err = await result.communicate()
     if len(err) > 0 or result.returncode != 0:
-        err_cb(bytes.decode(err))
+        _ERR_CB(bytes.decode(err))
     if pmidi:
         return bytes.decode(output).split('\n')
     ports = []
@@ -77,22 +99,21 @@ async def _write_stdin(stdin, msg):
     stdin.write(str.encode('{}\n'.format(msg)))
     await stdin.drain()
 
-async def play_midi(
+async def _play_midi(
         port: str,
         midi: Path,
-        on_midi_end,
-        error_cb=print,
-        pmidi=True,
-        await_jack=False) -> Process:
+        on_midi_end: Callable[[], None],
+        pmidi: bool=True,
+        await_jack: bool=False) -> Process:
     """Start playing midi file."""
     if pmidi:
         proc = await create_subprocess_exec(
             'pmidi', '-p', port, '-d', '0', str(midi))
-        ensure_future(exec_on_midi_end(proc, on_midi_end, port))
+        ensure_future(_exec_on_midi_end(proc, on_midi_end, port))
         return proc
     proc = await create_subprocess_exec(
         'jpmidi', str(midi), stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    ensure_future(_read_stderr(proc.stderr, error_cb))
+    ensure_future(_read_stderr(proc.stderr, _ERR_CB))
     # select port
     await _read_stdout(proc.stdout)
     await _write_stdin(proc.stdin, 'connect')
@@ -101,9 +122,9 @@ async def play_midi(
         if port in line:
             port_num = line[0:line.index(')')]
     if port_num is None:
-        error_cb("no port match found for {}".format(port))
-        await stop_midi(proc)
-        ensure_future(exec_on_midi_end(proc, on_midi_end, port))
+        _ERR_CB("no port match found for {}".format(port))
+        await _stop_midi()
+        ensure_future(_exec_on_midi_end(proc, on_midi_end, port))
         return proc
     await _write_stdin(proc.stdin, 'connect {}'.format(port_num))
 
@@ -114,22 +135,73 @@ async def play_midi(
         await _read_stdout(proc.stdout)
         await _write_stdin(proc.stdin, 'play')
 
-    ensure_future(exec_on_midi_end(proc, on_midi_end, port))
+    ensure_future(_exec_on_midi_end(proc, on_midi_end, port))
     return proc
 
-async def stop_midi(proc: Process) -> None:
+async def _stop_midi() -> None:
     """Stop midi playback."""
-    if proc.stdout is None:
-        proc.terminate()
+    if _PROC.stdout is None:
+        _PROC.terminate()
     else:
-        await _read_stdout(proc.stdout)
-        await _write_stdin(proc.stdin, 'stop')
-        await _read_stdout(proc.stdout)
-        await _write_stdin(proc.stdin, 'exit')
+        await _read_stdout(_PROC.stdout)
+        await _write_stdin(_PROC.stdin, 'stop')
+        await _read_stdout(_PROC.stdout)
+        await _write_stdin(_PROC.stdin, 'exit')
         # consume any last output
-        await proc.stdout.read()
+        await _PROC.stdout.read()
 
-async def exec_on_midi_end(proc: Process, func: Callable, port: str) -> int:
+async def play(
+        midi: Path,
+        on_midi_end: Callable[[], None],
+        pmidi: bool=True,
+        await_jack: bool=False) -> bool:
+    """Start playback is possible. Return value is sucess."""
+    global _PROC  # pylint: disable=global-statement
+    if pmidi and _PMIDI_PORT is None:
+        _ERR_CB((
+            "No pmidi port found. Did you select the correct one? "
+            "Is your synth running?"))
+        return False
+    if not pmidi and _JPMIDI_PORT is None:
+        _ERR_CB("No jpmidi port setting found. Did you select one?")
+        return False
+    if _PROC_LOCK.locked():
+        _ERR_CB("Playback was already started, cancelling task.")
+        return False
+    await _PROC_LOCK.acquire()
+    _PROC = await _play_midi(
+        _PMIDI_PORT if pmidi else _JPMIDI_PORT,
+        midi,
+        on_midi_end,
+        pmidi,
+        await_jack)
+    return True
+
+async def stop():
+    """Stop playback no matter the circumstances."""
+    if not _PROC_LOCK.locked():
+        _ERR_CB("No active playback process, nothing to stop.")
+        return
+    if _PROC is None:
+        _ERR_CB("Proc is locked, but value is None: bug.")
+        _PROC_LOCK.release()
+        return
+    await _stop_midi()
+
+async def play_or_stop(
+        midi: Path,
+        on_midi_end: Callable[[], None],
+        pmidi: bool=True,
+        await_jack: bool=False) -> bool:
+    """Toggle playback state. Return True if now playing, else False."""
+    if _PROC_LOCK.locked():
+        await stop()
+        return False
+    else:
+        return await play(midi, on_midi_end, pmidi, await_jack)
+
+
+async def _exec_on_midi_end(proc: Process, func: Callable, port: str) -> int:
     """Exec func when midi stops playing."""
     return_code = await proc.wait()
 
@@ -145,5 +217,6 @@ async def exec_on_midi_end(proc: Process, func: Callable, port: str) -> int:
                 'voicetrainer/reset.midi'))
         await reset_proc.wait()
         cleanup_resources()
+    _PROC_LOCK.release()
     await func()
     return return_code

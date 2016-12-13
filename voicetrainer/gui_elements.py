@@ -29,6 +29,14 @@ class Widget:
         """Configure column."""
         self._widget.columnconfigure(*args, **kwargs)
 
+    def winfo_toplevel(self):
+        """Retrieve toplevel instance."""
+        return self._widget.winfo_toplevel()
+
+    def bind(self, event, callback):
+        """Bind event to callback."""
+        self._widget.bind(event, callback)
+
 class IntMixin:
 
     """Methods for widgets using an integer value."""

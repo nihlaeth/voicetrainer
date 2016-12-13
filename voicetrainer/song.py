@@ -8,11 +8,9 @@ from datetime import datetime
 
 from voicetrainer.aiotk import (
     ErrorDialog,
-    InfoDialog,
     OkCancelDialog,
-    SaveFileDialog,
     LoadFileDialog)
-from voicetrainer.play import play_midi
+from voicetrainer.play import play_or_stop
 from voicetrainer.compile import get_file, get_single_sheet
 from voicetrainer.compile_interface import FileType, Song
 from voicetrainer.gui_elements import (
@@ -225,7 +223,7 @@ class SongTab:
         self.b_play = Button(
             parent,
             text='Play',
-            command=lambda: asyncio.ensure_future(self._play_or_stop()))
+            command=lambda: asyncio.ensure_future(self.play()))
         self.b_play.grid(
             column=0, row=row_count, columnspan=2, sticky=tk.NSEW)
         row_count += 1
@@ -360,6 +358,32 @@ class SongTab:
         asyncio.ensure_future(self._update_sheet())
         await get_file(self._get_interface(), FileType.midi)
 
+    async def play(self):
+        """Play midi file."""
+        midi = await get_file(self._get_interface(), FileType.midi)
+        if self.__midi_executable.get() == 'pmidi':
+            playing = await play_or_stop(midi, self._on_midi_stop)
+        else:
+            # FIXME: fetch midi_executable and await_jack somehow
+            # have them trickle down from MainWindow with singular
+            # play/stop button
+            playing = await play_or_stop(
+                midi,
+                on_midi_end=self._on_midi_stop,
+                pmidi=False)
+        if playing:
+            self.b_play.set_text("Stop")
+        else:
+            self.b_play.set_text("Play")
+
+    async def _on_midi_stop(self):
+        """Handle end of midi playback."""
+        self.b_play.set_text("Play")
+
+    async def export(self, _: FileType):
+        """Export compiled data."""
+        return self._get_interface()
+
 class SongMixin:
 
     """
@@ -415,22 +439,6 @@ class SongMixin:
             label='Delete',
             command=lambda: asyncio.ensure_future(
                 SongMixin.remove_song(self)))
-        self.__menu.add_command(
-            label='Export midi',
-            command=lambda: asyncio.ensure_future(
-                SongMixin.export(self, FileType.midi)))
-        self.__menu.add_command(
-            label='Export png',
-            command=lambda: asyncio.ensure_future(
-                SongMixin.export(self, FileType.png)))
-        self.__menu.add_command(
-            label='Export pdf',
-            command=lambda: asyncio.ensure_future(
-                SongMixin.export(self, FileType.pdf)))
-        self.__menu.add_command(
-            label='Export lilypond',
-            command=lambda: asyncio.ensure_future(
-                SongMixin.export(self, FileType.lily)))
 
         self.__frame = Frame(self.notebook)
         self.notebook.append({'name': 'Songs', 'widget': self.__frame})
@@ -475,29 +483,7 @@ class SongMixin:
 
     async def export(self, file_type: FileType):
         """Export compiled data."""
-        # get interface
-        song = SongMixin.get_so_interface(self)
-
-        # get save_path
-        file_name = song.get_filename(file_type)
-        save_dialog = SaveFileDialog(
-            self.root,
-            dir_or_file=Path('~'),
-            default=file_name.name)
-        save_path = await save_dialog.await_data()
-        if save_path is None:
-            return
-
-        # compile and save
-        if file_type is FileType.lily:
-            # we don't compile lily
-            save_path.write_text(song.get_final_lily_code(file_type))
-            InfoDialog(self.root, data="Export complete")
-            return
-        await self.get_file(song, file_type)
-
-        save_path.write_bytes(file_name.read_bytes())
-        InfoDialog(self.root, data="Export complete")
+        return await self.__tabs[self.__notebook.get()[1]].export(file_type)
 
     async def add_song(self):
         """Add new song."""
@@ -552,52 +538,3 @@ class SongMixin:
         """Remove all compiled files."""
         for key in self.__tabs:
             self.__tabs[key].clear_cache()
-
-    async def play_or_stop(self):
-        """Play or stop midi."""
-        if self.player is not None and self.player != '...':
-            await self.stop()
-        else:
-            await SongMixin.play(self)
-
-    async def play(self):
-        """Play midi file."""
-        midi = await self.get_file(
-            SongMixin.get_so_interface(self),
-            FileType.midi)
-        if self.port is None:
-            self.messages.append(
-                "Still searching for pmidi port, cancelled playback.")
-            self.show_messages()
-            return
-        if self.__jpmidi_port is None and self.__midi_executable.get() == 'jpmidi':
-            await self.select_port(pmidi=False)
-        if self.player is not None:
-            self.new_message("already playing")
-            return
-        # reserve player
-        self.player = "..."
-        try:
-            if self.__midi_executable.get() == 'pmidi':
-                self.player = await play_midi(
-                    self.port,
-                    midi,
-                    on_midi_end=lambda: SongMixin.on_midi_stop(self))
-            else:
-                self.player = await play_midi(
-                    self.__jpmidi_port,
-                    midi,
-                    on_midi_end=lambda: SongMixin.on_midi_stop(self),
-                    pmidi=False,
-                    error_cb=self.new_message)
-        except Exception as err:
-            ErrorDialog(
-                self.root,
-                data="Could not start midi playback\n{}".format(str(err)))
-            raise
-        self.__tabs[self.__num]['play_stop'].set("stop")
-
-    async def on_midi_stop(self):
-        """Handle end of midi playback."""
-        self.player = None
-        self.__tabs[self.__num]['play_stop'].set("play")

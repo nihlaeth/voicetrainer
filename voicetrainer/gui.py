@@ -5,14 +5,21 @@ import asyncio
 from pathlib import Path
 import json
 
-from voicetrainer.compile import set_err_cb, set_compiler_cb
+from voicetrainer.compile import set_err_cb as set_compile_err_cb
+from voicetrainer.compile import set_compiler_cb, get_file
+from voicetrainer.compile_interface import FileType
 from voicetrainer.aiotk import (
     Root,
     OkCancelDialog,
+    InfoDialog,
+    SaveFileDialog,
     ErrorDialog,
     PortSelection,
     Messages)
-from voicetrainer.play import stop_midi, PortFinder, list_ports
+from voicetrainer.gui_elements import (
+    Frame, Notebook, Label, Button)
+from voicetrainer.play import set_err_cb as set_play_err_cb
+from voicetrainer.play import PortFinder, list_ports, stop, set_pmidi_port
 from voicetrainer.exercise import ExerciseMixin
 from voicetrainer.song import SongMixin
 
@@ -34,16 +41,13 @@ class MainWindow(ExerciseMixin, SongMixin):
         self.messages = []
         self.messages_read = 0
         self.msg_window = None
-        set_err_cb(self.new_message)
+        set_compile_err_cb(self.new_message)
+        set_play_err_cb(self.new_message)
 
         # midi state
         self.port = None
         self.port_match = 'FLUID'
         asyncio.ensure_future(self.find_port())
-        self.player = None
-        self.stopping = False
-        self.play_next = False
-        self.repeat_once = False
 
         # gui elements storage
         self.create_widgets()
@@ -60,10 +64,11 @@ class MainWindow(ExerciseMixin, SongMixin):
             async for port in port_finder:
                 if port is not None:
                     self.port = port
+                    set_pmidi_port(port)
                 else:
                     await asyncio.sleep(5)
                     port_finder.match = self.port_match
-            self.port_label_text.set('pmidi port: {}'.format(self.port))
+            self.port_label.set_text('pmidi port: {}'.format(self.port))
         except Exception as err:
             ErrorDialog(
                 self.root,
@@ -84,14 +89,14 @@ class MainWindow(ExerciseMixin, SongMixin):
             if self.port is not None:
                 # not currently searching for port, start
                 self.port = None
-                self.port_label_text.set('pmidi port: None')
+                self.port_label.set_text('pmidi port: None')
                 await self.find_port()
         else:
             self._SongMixin__jpmidi_port = await selection_dialog.await_data()
 
     def create_widgets(self):
         """Put some stuff up to look at."""
-        self.window = ttk.Frame(self.root)
+        self.window = Frame(self.root)
         self.window.rowconfigure(0, weight=1)
         self.window.columnconfigure(2, weight=1)
         self.window.grid(column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
@@ -112,6 +117,24 @@ class MainWindow(ExerciseMixin, SongMixin):
         self.file_menu.add_command(
             label='Select port',
             command=lambda: asyncio.ensure_future(self.select_port()))
+        self.file_menu.add_separator()
+        self.file_menu.add_command(
+            label='Export midi',
+            command=lambda: asyncio.ensure_future(
+                self.export(FileType.midi)))
+        self.file_menu.add_command(
+            label='Export png',
+            command=lambda: asyncio.ensure_future(
+                self.export(FileType.png)))
+        self.file_menu.add_command(
+            label='Export pdf',
+            command=lambda: asyncio.ensure_future(
+                self.export(FileType.pdf)))
+        self.file_menu.add_command(
+            label='Export lilypond',
+            command=lambda: asyncio.ensure_future(
+                self.export(FileType.lily)))
+        self.file_menu.add_separator()
         self.file_menu.add_command(
             label='Save state',
             command=self.save_state)
@@ -123,20 +146,20 @@ class MainWindow(ExerciseMixin, SongMixin):
             label='Quit',
             command=lambda: asyncio.ensure_future(self.quit()))
 
-        self.notebook = ttk.Notebook(self.window)
+        self.notebook = Notebook(self.window)
         self.notebook.grid(
             column=0, row=0, columnspan=3, sticky=tk.N+tk.S+tk.E+tk.W)
         self.notebook.rowconfigure(0, weight=1)
         self.notebook.columnconfigure(0, weight=1)
         self.separators = []
 
-        self.statusbar = ttk.Frame(self.window)
+        self.statusbar = Frame(self.window)
         self.statusbar.grid(row=1, column=0, sticky=tk.N+tk.W)
 
-        self.compiler_label = ttk.Label(self.statusbar, text="Compiler:")
+        self.compiler_label = Label(self.statusbar, text="Compiler:")
         self.compiler_label.grid(row=0, column=0, sticky=tk.N+tk.E)
         self.progress = ttk.Progressbar(
-            self.statusbar,
+            self.statusbar.raw,
             mode='indeterminate',
             orient=tk.HORIZONTAL)
         self.progress.grid(row=0, column=1, sticky=tk.N+tk.W)
@@ -145,22 +168,18 @@ class MainWindow(ExerciseMixin, SongMixin):
         sep.grid(row=0, column=2)
         self.separators.append(sep)
 
-        self.port_label_text = tk.StringVar()
-        self.port_label_text.set('pmidi port: None')
-        self.port_label = ttk.Label(
+        self.port_label = Label(
             self.statusbar,
-            textvariable=self.port_label_text)
+            text='pmidi port: None')
         self.port_label.grid(row=0, column=3, sticky=tk.N+tk.W)
 
         sep = ttk.Separator(self.statusbar, orient=tk.VERTICAL)
         sep.grid(row=0, column=4)
         self.separators.append(sep)
 
-        self.msg_text = tk.StringVar()
-        self.msg_text.set('messages')
-        self.msg_button = ttk.Button(
+        self.msg_button = Button(
             self.statusbar,
-            textvariable=self.msg_text,
+            text='messages',
             command=self.display_messages)
         self.msg_button.grid(row=0, column=5, sticky=tk.N+tk.W)
 
@@ -181,8 +200,7 @@ class MainWindow(ExerciseMixin, SongMixin):
             if not await confirm_exit.await_data():
                 return
         if self.player is not None:
-            self.stopping = True
-            await self.stop()
+            await stop()
         self.close()
 
     def close(self):
@@ -217,7 +235,7 @@ class MainWindow(ExerciseMixin, SongMixin):
     def show_messages(self):
         """Show if there unread messages."""
         if len(self.messages) > self.messages_read:
-            self.msg_text.set('!!!Messages!!!')
+            self.msg_button.set_text('!!!Messages!!!')
             if self.msg_window is not None:
                 self.msg_window.update_data(self.messages)
 
@@ -236,7 +254,7 @@ class MainWindow(ExerciseMixin, SongMixin):
         else:
             self.msg_window.to_front()
         self.messages_read = len(self.messages)
-        self.msg_text.set('Messages')
+        self.msg_button.set_text('Messages')
 
     def on_close_msg_window(self, _):
         """Messages window was closed."""
@@ -262,13 +280,37 @@ class MainWindow(ExerciseMixin, SongMixin):
         await ExerciseMixin.clear_cache(self)
         await SongMixin.clear_cache(self)
 
-    async def stop(self):
-        """Stop midi regardless of state."""
-        if self.player == '...':
-            self.new_message("playback still starting - cannot stop it")
+    async def export(self, file_type: FileType):
+        """Export compiled data."""
+        tab_name = self.notebook.get()[1]
+        if tab_name == 'Songs':
+            interface = await SongMixin.export(self, file_type)
+        elif tab_name == 'Exercises':
+            interface = await ExerciseMixin.export(self, file_type)
+        else:
             return
-        if self.player is not None:
-            await stop_midi(self.player)
+
+        # get save_path
+        file_name = interface.get_filename(file_type)
+        save_dialog = SaveFileDialog(
+            self.root,
+            dir_or_file=Path('~'),
+            default=file_name.name)
+        save_path = await save_dialog.await_data()
+        if save_path is None:
+            return
+
+        # compile and save
+        if file_type is FileType.lily:
+            # we don't compile lily
+            save_path.write_text(
+                interface.get_final_lily_code(file_type))
+            InfoDialog(self.root, data="Export complete")
+            return
+        await get_file(interface, file_type)
+
+        save_path.write_bytes(file_name.read_bytes())
+        InfoDialog(self.root, data="Export complete")
 
 def start():
     """Start gui and event loop."""
