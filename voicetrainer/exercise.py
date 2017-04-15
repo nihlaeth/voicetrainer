@@ -338,7 +338,7 @@ class ExerciseMixin:
         self.__notebook.rowconfigure(0, weight=1)
         self.__notebook.columnconfigure(0, weight=1)
         for exercise in self.__data_path.glob('*.ly'):
-            self.__tabs[exercise] = ExerciseTab(
+            self.__tabs[str(exercise)] = ExerciseTab(
                 self.__notebook,
                 Exercise(
                     data_path=self.__data_path,
