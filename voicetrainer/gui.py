@@ -19,7 +19,12 @@ from voicetrainer.aiotk import (
 from voicetrainer.gui_elements import (
     Frame, Notebook, Label, Button)
 from voicetrainer.play import set_err_cb as set_play_err_cb
-from voicetrainer.play import PortFinder, list_ports, stop, set_pmidi_port
+from voicetrainer.play import (
+    PortFinder,
+    list_ports,
+    stop,
+    is_playing,
+    set_pmidi_port)
 from voicetrainer.exercise import ExerciseMixin
 from voicetrainer.song import SongMixin
 
@@ -164,7 +169,7 @@ class MainWindow(ExerciseMixin, SongMixin):
             orient=tk.HORIZONTAL)
         self.progress.grid(row=0, column=1, sticky=tk.N+tk.W)
 
-        sep = ttk.Separator(self.statusbar, orient=tk.VERTICAL)
+        sep = ttk.Separator(self.statusbar.raw, orient=tk.VERTICAL)
         sep.grid(row=0, column=2)
         self.separators.append(sep)
 
@@ -173,17 +178,17 @@ class MainWindow(ExerciseMixin, SongMixin):
             text='pmidi port: None')
         self.port_label.grid(row=0, column=3, sticky=tk.N+tk.W)
 
-        sep = ttk.Separator(self.statusbar, orient=tk.VERTICAL)
+        sep = ttk.Separator(self.statusbar.raw, orient=tk.VERTICAL)
         sep.grid(row=0, column=4)
         self.separators.append(sep)
 
         self.msg_button = Button(
-            self.statusbar,
+            self.statusbar.raw,
             text='messages',
             command=self.display_messages)
         self.msg_button.grid(row=0, column=5, sticky=tk.N+tk.W)
 
-        self.resize = ttk.Sizegrip(self.window)
+        self.resize = ttk.Sizegrip(self.window.raw)
         self.resize.grid(row=1, column=2, sticky=tk.S+tk.E)
 
     async def quit(self):
@@ -199,7 +204,7 @@ class MainWindow(ExerciseMixin, SongMixin):
                     "task will be aborted."))
             if not await confirm_exit.await_data():
                 return
-        if self.player is not None:
+        if is_playing():
             await stop()
         self.close()
 
@@ -284,9 +289,9 @@ class MainWindow(ExerciseMixin, SongMixin):
         """Export compiled data."""
         tab_name = self.notebook.get()[1]
         if tab_name == 'Songs':
-            interface = await SongMixin.export(self, file_type)
+            interface = SongMixin.export(self)
         elif tab_name == 'Exercises':
-            interface = await ExerciseMixin.export(self, file_type)
+            interface = ExerciseMixin.export(self)
         else:
             return
 

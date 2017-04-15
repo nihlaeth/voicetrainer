@@ -359,16 +359,16 @@ class SongTab:
     async def play(self):
         """Play midi file."""
         midi = await get_file(self._get_interface(), FileType.midi)
-        if self.__midi_executable.get() == 'pmidi':
-            playing = await play_or_stop(midi, self._on_midi_stop)
-        else:
-            # FIXME: fetch midi_executable and await_jack somehow
-            # have them trickle down from MainWindow with singular
-            # play/stop button
-            playing = await play_or_stop(
-                midi,
-                on_midi_end=self._on_midi_stop,
-                pmidi=False)
+        # if self.__midi_executable.get() == 'pmidi':
+        playing = await play_or_stop(midi, self._on_midi_stop)
+        # else:
+        #     # FIXME: fetch midi_executable and await_jack somehow
+        #     # have them trickle down from MainWindow with singular
+        #     # play/stop button
+        #     playing = await play_or_stop(
+        #         midi,
+        #         on_midi_end=self._on_midi_stop,
+        #         pmidi=False)
         if playing:
             self.b_play.set_text("Stop")
         else:
@@ -378,7 +378,7 @@ class SongTab:
         """Handle end of midi playback."""
         self.b_play.set_text("Play")
 
-    async def export(self, _: FileType):
+    def export(self):
         """Export compiled data."""
         return self._get_interface()
 
@@ -479,9 +479,9 @@ class SongMixin:
             if key in data:
                 self.__tabs[key].restore_state(data[key])
 
-    async def export(self, file_type: FileType):
+    def export(self):
         """Export compiled data."""
-        return await self.__tabs[self.__notebook.get()[1]].export(file_type)
+        return self.__tabs[self.__notebook.get()[1]].export()
 
     async def add_song(self):
         """Add new song."""

@@ -177,6 +177,10 @@ async def play(
         await_jack)
     return True
 
+def is_playing():
+    """Is there currently a MIDI file playing?"""
+    return _PROC_LOCK.locked()
+
 async def stop():
     """Stop playback no matter the circumstances."""
     if not _PROC_LOCK.locked():

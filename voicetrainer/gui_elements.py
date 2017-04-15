@@ -13,19 +13,19 @@ class Widget:
     data_type = int
 
     @property
-    def raw(self: Widget) -> tk.Widget:
+    def raw(self) -> tk.Widget:
         """Tkinter does not accept our awesone widgets, a tk.Widget is called for."""
         return self._widget
 
-    def grid(self: Widget, *args, **kwargs):
+    def grid(self, *args, **kwargs):
         """Add widget to grid."""
         self._widget.grid(*args, **kwargs)
 
-    def rowconfigure(self: Widget, *args, **kwargs):
+    def rowconfigure(self, *args, **kwargs):
         """Configure row."""
         self._widget.rowconfigure(*args, **kwargs)
 
-    def columnconfigure(self: Widget, *args, **kwargs):
+    def columnconfigure(self, *args, **kwargs):
         """Configure column."""
         self._widget.columnconfigure(*args, **kwargs)
 
@@ -41,11 +41,11 @@ class IntMixin:
 
     """Methods for widgets using an integer value."""
 
-    def set(self: Widget, value: int):
+    def set(self, value: int):
         """Set widget value."""
         self._widget.set(int(value))
 
-    def get(self: Widget) -> int:
+    def get(self) -> int:
         """Return widget value."""
         return int(self._widget.get())
 
@@ -53,7 +53,7 @@ class ControlVarMixin:
 
     """Methods for widgets using either a StringVar or an IntVar."""
 
-    def set(self: Widget, value: Union[str, int, bool]):
+    def set(self, value: Union[str, int, bool]):
         """Set widget value."""
         if isinstance(self._variable, tk.StringVar):
             self._variable.set(str(value))
@@ -63,7 +63,7 @@ class ControlVarMixin:
             raise TypeError(
                 'self._variable should be of type tk.IntVar or tk.StringVar')
 
-    def get(self: Widget) -> Union[str, int, bool]:
+    def get(self) -> Union[str, int, bool]:
         """Return widget value."""
         return self.data_type(self._variable.get())
 
@@ -83,7 +83,7 @@ class TkMixin:
 
     """Methods specific to tk widgets."""
 
-    def disable(self: Widget):
+    def disable(self):
         """Disable widget using configure."""
         self._widget.configure(state=tk.DISABLED)
 
@@ -91,7 +91,7 @@ class TtkMixin:
 
     """Methods specific to ttk widgets."""
 
-    def disable(self: Widget):
+    def disable(self):
         """Disable widget using state."""
         self._widget.state(('disabled',))
 
@@ -227,7 +227,7 @@ class OptionMenu(Widget, ControlVarMixin, TkMixin):
     """OptionMenu widget."""
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget],
             option_list: List[str],
             default: str,
@@ -248,7 +248,7 @@ class Spinbox(Widget, ControlVarMixin, TkMixin):
     """SpinBox widget."""
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget],
             width: int,
             from_: int,
@@ -288,7 +288,7 @@ class Listbox(Widget, SequenceMixin, TkMixin):
     """Listbox widget."""
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget],
             width: int,
             values: Tuple[str],
@@ -323,14 +323,14 @@ class Listbox(Widget, SequenceMixin, TkMixin):
         self._widget.insert(0, *self._values)
         self.set(selection)
 
-    def get(self: Widget) -> List[str]:
+    def get(self) -> List[str]:
         """Get list of selected items."""
         selected = []
         for index in self._widget.curselection():
             selected.append(self._values[index])
         return selected
 
-    def set(self: Widget, values: Dict[bool]):
+    def set(self, values: Dict[str, bool]):
         """Set every key in values to selected or unselected."""
         for key in values:
             if key not in self._values:
@@ -346,7 +346,7 @@ class Checkbutton(Widget, ControlVarMixin, TextMixin, TtkMixin):
     """Checkbutton widget."""
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget],
             text: str,
             default: bool=False,
@@ -369,7 +369,7 @@ class Button(Widget, TextMixin, TtkMixin):
     """Button widget."""
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget],
             text: str,
             command: Optional[Callable[[], None]]=None):
@@ -387,7 +387,7 @@ class Label(Widget, TextMixin, TtkMixin):
     """Label widget."""
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget],
             text: str):
         if isinstance(parent, Widget):
@@ -403,7 +403,7 @@ class Frame(Widget, TtkMixin):
     """Frame widget."""
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget]):
         if isinstance(parent, Widget):
             parent = parent.raw
@@ -414,7 +414,7 @@ class LabelFrame(Widget, TextMixin, TtkMixin):
     """Label widget."""
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget],
             text: str):
         if isinstance(parent, Widget):
@@ -436,7 +436,7 @@ class Notebook(Widget, SequenceMixin, TtkMixin):
     """
 
     def __init__(
-            self: Widget,
+            self,
             parent: Union[Widget, tk.Widget]):
         if isinstance(parent, Widget):
             parent = parent.raw
@@ -451,13 +451,14 @@ class Notebook(Widget, SequenceMixin, TtkMixin):
         """Sync list in self._values with notebook tabs."""
         for i, tab_data in enumerate(self._values):
             tabs = self._get_tabs()
-            if tab_data['tab_name'] != tabs[i]:
+            if len(tabs) <= i or tab_data['name'] != tabs[i]:
                 if isinstance(tab_data['widget'], Widget):
                     widget = tab_data['widget'].raw
                 else:
                     widget = tab_data['widget']
+                where = "end" if len(tabs) <= i + 1 else tabs[i + 1]
                 self._widget.insert(
-                    i, widget, text=tab_data['tab_name'])
+                    where, widget, text=tab_data['name'])
         if len(self._values) == len(self._widget.tabs()):
             return
         # now delete all tabs not in self._values

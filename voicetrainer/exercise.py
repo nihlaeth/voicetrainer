@@ -8,12 +8,10 @@ from random import choice
 
 from voicetrainer.aiotk import (
     ErrorDialog,
-    InfoDialog,
     OkCancelDialog,
-    SaveFileDialog,
     LoadFileDialog)
-from voicetrainer.play import play_or_stop, play
-from voicetrainer.common import PITCH_LIST
+from voicetrainer.play import play_or_stop, stop, is_playing
+from voicetrainer.common import PITCH_LIST, SOUND_LIST
 from voicetrainer.compile import get_file, get_single_sheet
 from voicetrainer.compile_interface import FileType, Exercise
 from voicetrainer.gui_elements import (
@@ -35,6 +33,11 @@ class ExerciseTab:
             self,
             notebook: Notebook,
             exercise: Exercise):
+        # some control variables
+        self.stopping = False
+        self.play_next = False
+        self.repeat_once = False
+
         self.name = exercise.name
         config = exercise.config
         self._data_path = exercise.data_path
@@ -64,7 +67,7 @@ class ExerciseTab:
         # pitch selector
         self.pitch_range = Listbox(self.tab, width=3, values=PITCH_LIST)
         self.pitch_range.grid(row=1, column=1, sticky=tk.N+tk.S+tk.W)
-        self.pitch_range.set(PITCH_LIST[7:14])
+        self.pitch_range.set({pitch: True for pitch in PITCH_LIST[7:14]})
 
         # controls
         self.control_frame = Frame(self.tab)
@@ -73,14 +76,15 @@ class ExerciseTab:
         self._create_controls(self.control_frame, config)
 
         # sheet display
-        sheet = tk.Canvas(self.tab, bd=0, highlightthickness=0)
-        sheet.bind(
+        self._image_cache = {}
+        self.sheet = tk.Canvas(self.tab.raw, bd=0, highlightthickness=0)
+        self.sheet.bind(
             "<Configure>",
             lambda e: asyncio.ensure_future(
                 self._resize_sheet(e)))
-        sheet.grid(column=2, row=1, columnspan=2, sticky=tk.NSEW)
+        self.sheet.grid(column=2, row=1, columnspan=2, sticky=tk.NSEW)
 
-        sheet.bind(
+        self.sheet.bind(
             "<Button-1>",
             lambda e: self._set_repeat_once())
         asyncio.ensure_future(self._update_sheet())
@@ -100,7 +104,7 @@ class ExerciseTab:
         self.sound = OptionMenu(
             parent,
             default='Mi',
-            option_list=["Mi", "Na", "Noe", "Nu", "No"],
+            option_list=SOUND_LIST,
             command=lambda _: asyncio.ensure_future(
                 self._update_sheet()))
         self.sound.grid(column=2, row=0, sticky=tk.W+tk.N)
@@ -176,6 +180,121 @@ class ExerciseTab:
             sound=self.sound.get(),
             velocity=self.velocity.get())
 
+    async def clear_cache(self):
+        """Remove all compiled files."""
+        # remove files
+        for file_ in chain(
+                self._data_path.glob("{}-*.midi".format(self.name)),
+                self._data_path.glob("{}-*.png".format(self.name)),
+                self._data_path.glob("{}-*.pdf".format(self.name))):
+            file_.unlink()
+        self._image_cache = {}
+        await self._update_sheet()
+
+    async def _update_sheet(self):
+        """Display relevant sheet."""
+        # pylint: disable=invalid-name
+        # type declaration
+        Size = namedtuple('Size', ['width', 'height'])
+        size = Size(
+            self.sheet.winfo_width(),
+            self.sheet.winfo_height())
+        await self._resize_sheet(size)
+
+    async def _resize_sheet(self, event):
+        """Resize sheets to screen size."""
+        self.sheet.delete("left")
+        left = self._get_interface()
+        # make sure pages are compiled
+        await get_file(left)
+        left_path = await get_single_sheet(
+            self._image_cache,
+            left,
+            event.width,
+            event.height)
+        self.sheet.create_image(
+            0,
+            0,
+            image=self._image_cache[left_path]['image'],
+            anchor=tk.NW,
+            tags="left")
+
+    async def _on_pitch_change(self):
+        """New pitch was picked by user or app."""
+        asyncio.ensure_future(self._update_sheet())
+        if is_playing():
+            self.play_next = True
+            await stop()
+        else:
+            await self.play()
+
+    def _set_repeat_once(self, _=None):
+        """Repeat this midi once, then continue."""
+        self.repeat_once = True
+
+    async def _next(self):
+        """Skip to next exercise."""
+        curr_pitch = self.key.get()
+        curr_pos = PITCH_LIST.index(curr_pitch)
+        pitch_pos = curr_pos
+        pitch_selection = self.pitch_range.get()
+        if len(pitch_selection) == 0:
+            return
+        if self.random.get() == 1:
+            while pitch_pos == curr_pos:
+                pitch_pos = choice(pitch_selection)
+        elif curr_pos in pitch_selection:
+            if pitch_selection.index(curr_pos) >= len(pitch_selection) - 1:
+                curr_sound = self.sound.get()
+                sound_pos = SOUND_LIST.index(curr_sound)
+                if sound_pos < len(SOUND_LIST) - 1:
+                    self.sound.set(SOUND_LIST[sound_pos + 1])
+                else:
+                    self.sound.set(SOUND_LIST[0])
+                asyncio.ensure_future(self._update_sheet())
+                pitch_pos = pitch_selection[0]
+            else:
+                pitch_pos = pitch_selection[
+                    pitch_selection.index(curr_pos) + 1]
+        else:
+            while pitch_pos not in pitch_selection:
+                pitch_pos += 1
+                if pitch_pos >= len(PITCH_LIST):
+                    pitch_pos = 0
+        self.key.set(PITCH_LIST[pitch_pos])
+        # I thought tkinter would call this, but apparently not
+        await self._on_pitch_change()
+
+    async def play(self):
+        """Play midi file."""
+        midi = await get_file(self._get_interface(), FileType.midi)
+        playing = await play_or_stop(midi, self._on_midi_stop)
+        if playing:
+            self.b_play.set_text("Stop")
+        else:
+            self.b_play.set_text("Play")
+
+    async def _on_midi_stop(self):
+        """Handle end of midi playback."""
+        if self.stopping:
+            self.play_next = False
+            self.stopping = False
+            self.b_play.set_text("Play")
+            return
+        if self.play_next or self.autonext.get() == 1:
+            self.play_next = False
+            if not self.repeat_once:
+                await self._next()
+            else:
+                self.repeat_once = False
+                await self.play()
+            return
+        self.b_play.set_text("Play")
+
+    def export(self):
+        """Export compiled data."""
+        return self._get_interface()
+
 class ExerciseMixin:
 
     """
@@ -206,26 +325,10 @@ class ExerciseMixin:
             label='Delete',
             command=lambda: asyncio.ensure_future(
                 ExerciseMixin.remove_exercise(self)))
-        self.__menu.add_command(
-            label='Export midi',
-            command=lambda: asyncio.ensure_future(
-                ExerciseMixin.export(self, FileType.midi)))
-        self.__menu.add_command(
-            label='Export png',
-            command=lambda: asyncio.ensure_future(
-                ExerciseMixin.export(self, FileType.png)))
-        self.__menu.add_command(
-            label='Export pdf',
-            command=lambda: asyncio.ensure_future(
-                ExerciseMixin.export(self, FileType.pdf)))
-        self.__menu.add_command(
-            label='Export lilypond',
-            command=lambda: asyncio.ensure_future(
-                ExerciseMixin.export(self, FileType.lily)))
 
         self.__frame = Frame(self.notebook)
         self.notebook.append(
-            {'name': 'Exercises', 'widget': self.__frand})
+            {'name': 'Exercises', 'widget': self.__frame})
         self.__frame.rowconfigure(0, weight=1)
         self.__frame.columnconfigure(0, weight=1)
 
@@ -255,31 +358,9 @@ class ExerciseMixin:
             if key in data:
                 self.__tabs[key].restore_state(data[key])
 
-    async def export(self, file_type: FileType):
+    def export(self):
         """Export compiled data."""
-        # get interface
-        exercise = ExerciseMixin.get_ex_interface(self)
-
-        # get save_path
-        file_name = exercise.get_filename(file_type)
-        save_dialog = SaveFileDialog(
-            self.root,
-            dir_or_file=Path('~'),
-            default=file_name.name)
-        save_path = await save_dialog.await_data()
-        if save_path is None:
-            return
-
-        # compile and save
-        if file_type == FileType.lily:
-            # we don't compile lily
-            save_path.write_text(exercise.get_final_lily_code(file_type))
-            InfoDialog(self.root, data="Export complete")
-            return
-        await self.get_file(exercise, file_type)
-
-        save_path.write_bytes(file_name.read_bytes())
-        InfoDialog(self.root, data="Export complete")
+        return self.__tabs[self.__notebook.get()[1]].export()
 
     async def add_exercise(self):
         """Add new exercise."""
@@ -306,12 +387,15 @@ class ExerciseMixin:
                 return
             new_file.touch()
             new_file.write_text(content)
-            ExerciseMixin.create_tab(self, ex_name)
+            self.__tabs[ex_name] = Exercise(
+                data_path=self.__data_path,
+                include_path=self.include_path,
+                name=ex_name)
+            self.__notebook.sort()
 
-    async def remove_exercise(self):
-        """Remove exercise."""
-        tab_num = self.__num
-        tab_name = self.__notebook.tab(tab_num)['text']
+    async def remove_song(self):
+        """Remove song."""
+        tab_index, tab_name = self.__notebook.get()
         confirm = OkCancelDialog(
             self.root,
             data="Are you sure you want to delete {}? This cannot be undone.".format(
@@ -320,155 +404,13 @@ class ExerciseMixin:
             return
         self.stopping = True
         await self.stop()
-        tab = self.__tabs[tab_num]['tab']
-        self.__notebook.forget(tab)
-        tab.destroy()
-        del self.__tabs[tab_num]
+        del self.__notebook[tab_index]
+        del self.__tabs[tab_name]
         file_name = Path(self.__data_path).joinpath(
             "{}.ly".format(tab_name))
         file_name.unlink()
 
     async def clear_cache(self):
         """Remove all compiled files."""
-        # remove files
-        for file_ in chain(
-                self.__data_path.glob("*.midi"),
-                self.__data_path.glob("*.png"),
-                self.__data_path.glob("*.pdf")):
-            file_.unlink()
-
-        # clear image_cache and display new sheets
-        for i in range(len(self.__tabs)):
-            await ExerciseMixin.update_sheet(self, tab_num=i)
-
-    # FIXME: move this to MainWindow
-    async def update_sheet(self, tab_num=None):
-        """Display relevant sheet."""
-        if tab_num is None:
-            tab_num = self.__num
-        # pylint: disable=invalid-name
-        # type declaration
-        Size = namedtuple('Size', ['width', 'height'])
-        size = Size(
-            self.__tabs[tab_num]['sheet'].winfo_width(),
-            self.__tabs[tab_num]['sheet'].winfo_height())
-        await ExerciseMixin.resize_sheet(self, size, tab_num)
-
-    async def resize_sheet(self, event, tab_num):
-        """Resize sheets to screen size."""
-        left = await self.get_single_sheet(
-            ExerciseMixin.get_ex_interface(self, tab_num),
-            event.width,
-            event.height)
-        self.__tabs[tab_num]['sheet'].delete("left")
-        self.__tabs[tab_num]['sheet'].create_image(
-            0,
-            0,
-            image=self.image_cache[left]['image'],
-            anchor=tk.NW,
-            tags="left")
-
-    async def on_pitch_change(self):
-        """New pitch was picked by user or app."""
-        asyncio.ensure_future(ExerciseMixin.update_sheet(self))
-        if self.player is not None:
-            self.play_next = True
-            if self.player != '...':
-                await self.stop()
-        else:
-            await ExerciseMixin.play(self)
-
-    def set_repeat_once(self, _=None):
-        """Repeat this midi once, then continue."""
-        self.repeat_once = True
-
-    async def next_(self):
-        """Skip to next exercise."""
-        curr_pitch = self.__tabs[self.__num]['curr_pitch'].get()
-        curr_pos = self.__pitch_list.index(curr_pitch)
-        pitch_pos = curr_pos
-        pitch_selection = self.__tabs[self.__num]['pitches'].curselection()
-        if len(pitch_selection) == 0:
-            return
-        if self.__tabs[self.__num]['random'].get() == 1:
-            while pitch_pos == curr_pos:
-                pitch_pos = choice(pitch_selection)
-        elif curr_pos in pitch_selection:
-            if pitch_selection.index(curr_pos) >= len(pitch_selection) - 1:
-                curr_sound = self.__tabs[self.__num]['sound'].get()
-                sound_pos = self.__sound_list.index(curr_sound)
-                if sound_pos < len(self.__sound_list) - 1:
-                    self.__tabs[self.__num]['sound'].set(
-                        self.__sound_list[sound_pos + 1])
-                else:
-                    self.__tabs[self.__num]['sound'].set(
-                        self.__sound_list[0])
-                asyncio.ensure_future(ExerciseMixin.update_sheet(self))
-                pitch_pos = pitch_selection[0]
-            else:
-                pitch_pos = pitch_selection[
-                    pitch_selection.index(curr_pos) + 1]
-        else:
-            while pitch_pos not in pitch_selection:
-                pitch_pos += 1
-                if pitch_pos >= len(self.__pitch_list):
-                    pitch_pos = 0
-        self.__tabs[self.__num]['curr_pitch'].set(
-            self.__pitch_list[pitch_pos])
-        # I thought tkinter would call this, but apparently not
-        await ExerciseMixin.on_pitch_change(self)
-
-    async def play_or_stop(self):
-        """Play or stop midi."""
-        if self.player is not None and self.player != '...':
-            # user stopped playback
-            self.stopping = True
-            await self.stop()
-        else:
-            await ExerciseMixin.play(self)
-
-    async def play(self):
-        """Play midi file."""
-        midi = await self.get_file(
-            ExerciseMixin.get_ex_interface(self),
-            FileType.midi)
-        if self.port is None:
-            self.messages.append(
-                "Still searching for pmidi port, cancelled playback.")
-            self.show_messages()
-            return
-        if self.player is not None:
-            self.new_message("already playing")
-            return
-        # reserve player
-        self.player = "..."
-        try:
-            self.player = await play_midi(
-                self.port,
-                midi,
-                on_midi_end=lambda: ExerciseMixin.on_midi_stop(self))
-        except Exception as err:
-            ErrorDialog(
-                self.root,
-                data="Could not start midi playback\n{}".format(str(err)))
-            raise
-        self.__tabs[self.__num]['play_stop'].set("stop")
-
-    async def on_midi_stop(self):
-        """Handle end of midi playback."""
-        self.player = None
-        if self.stopping:
-            self.play_next = False
-            self.stopping = False
-            self.__tabs[self.__num]['play_stop'].set("play")
-            return
-        if self.play_next or \
-                self.__tabs[self.__num]['autonext'].get() == 1:
-            self.play_next = False
-            if not self.repeat_once:
-                await ExerciseMixin.next_(self)
-            else:
-                self.repeat_once = False
-                await ExerciseMixin.play(self)
-            return
-        self.__tabs[self.__num]['play_stop'].set("play")
+        for key in self.__tabs:
+            self.__tabs[key].clear_cache()
