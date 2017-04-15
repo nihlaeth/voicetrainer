@@ -275,6 +275,8 @@ class ExerciseTab:
     async def play(self):
         """Play midi file."""
         midi = await get_file(self._get_interface(), FileType.midi)
+        if is_playing():
+            self.stopping = True
         playing = await play_or_stop(midi, self._on_midi_stop)
         if playing:
             self.b_play.set_text("Stop")
