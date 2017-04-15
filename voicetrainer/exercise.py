@@ -43,8 +43,8 @@ class ExerciseTab:
         self._data_path = exercise.data_path
         self._include_path = exercise.include_path
         self.tab = Frame(notebook)
-        self.tab.rowconfigure(0, weight=1)
-        self.tab.columnconfigure(1, weight=1)
+        self.tab.rowconfigure(1, weight=1)
+        self.tab.columnconfigure(3, weight=1)
         notebook.append({'name': self.name, 'widget': self.tab})
 
         # bpm selector

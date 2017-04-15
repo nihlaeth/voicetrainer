@@ -344,6 +344,10 @@ class Listbox(Widget, SequenceMixin, TkMixin):
             else:
                 self._widget.selection_clear(index)
 
+    def grid(self, *args, **kwargs):
+        """Add widget to grid."""
+        self._frame.grid(*args, **kwargs)
+
 class Checkbutton(Widget, ControlVarMixin, TextMixin, TtkMixin):
 
     """Checkbutton widget."""
