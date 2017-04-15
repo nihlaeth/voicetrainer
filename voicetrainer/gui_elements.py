@@ -326,12 +326,12 @@ class Listbox(Widget, SequenceMixin, TkMixin):
         self._widget.insert(0, *self._values)
         self.set(selection)
 
-    def get(self) -> List[str]:
-        """Get list of selected items."""
-        selected = []
+    def get(self) -> Dict[str, bool]:
+        """Get list of selection states of items."""
+        state = {item: False for item in self._values}
         for index in self._widget.curselection():
-            selected.append(self._values[index])
-        return selected
+            state[self._values[index]] = True
+        return state
 
     def set(self, values: Dict[str, bool]):
         """Set every key in values to selected or unselected."""

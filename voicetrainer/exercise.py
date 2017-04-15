@@ -233,36 +233,33 @@ class ExerciseTab:
         self.repeat_once = True
 
     async def _next(self):
-        """Skip to next exercise."""
-        curr_pitch = self.key.get()
-        curr_pos = PITCH_LIST.index(curr_pitch)
-        pitch_pos = curr_pos
-        pitch_selection = self.pitch_range.get()
-        if len(pitch_selection) == 0:
+        """Pick next exercise configuration."""
+        current_pitch = new_pitch = self.key.get()
+        pitch_position = PITCH_LIST.index(current_pitch)
+        pitch_range = self.pitch_range.get()
+        pitch_selection = [
+            pitch for pitch in pitch_range if pitch_range[pitch]]
+        if not pitch_selection:
             return
-        if self.random.get() == 1:
-            while pitch_pos == curr_pos:
-                pitch_pos = choice(pitch_selection)
-        elif curr_pos in pitch_selection:
-            if pitch_selection.index(curr_pos) >= len(pitch_selection) - 1:
-                curr_sound = self.sound.get()
-                sound_pos = SOUND_LIST.index(curr_sound)
-                if sound_pos < len(SOUND_LIST) - 1:
-                    self.sound.set(SOUND_LIST[sound_pos + 1])
-                else:
-                    self.sound.set(SOUND_LIST[0])
-                asyncio.ensure_future(self._update_sheet())
-                pitch_pos = pitch_selection[0]
-            else:
-                pitch_pos = pitch_selection[
-                    pitch_selection.index(curr_pos) + 1]
+        if self.random.get():
+            while new_pitch == current_pitch:
+                new_pitch = choice(pitch_selection)
         else:
-            while pitch_pos not in pitch_selection:
-                pitch_pos += 1
-                if pitch_pos >= len(PITCH_LIST):
-                    pitch_pos = 0
-        self.key.set(PITCH_LIST[pitch_pos])
-        # I thought tkinter would call this, but apparently not
+            while pitch_selection:
+                pitch_position += 1
+                if pitch_position >= len(PITCH_LIST):
+                    pitch_position = 0
+                    current_sound = self.sound.get()
+                    sound_position = SOUND_LIST.index(current_sound)
+                    if sound_position < len(SOUND_LIST) - 1:
+                        self.sound.set(SOUND_LIST[sound_position + 1])
+                    else:
+                        self.sound.set(SOUND_LIST[0])
+                    asyncio.ensure_future(self._update_sheet())
+                if PITCH_LIST[pitch_position] in pitch_selection:
+                    new_pitch = PITCH_LIST[pitch_position]
+                    break
+        self.key.set(new_pitch)
         await self._on_pitch_change()
 
     async def play(self):
