@@ -3,6 +3,9 @@ from typing import List, Optional, Callable, Union, Tuple, Dict, Any
 import tkinter as tk
 from tkinter import ttk
 
+# pylint gets confused about whitespace surrounding nested type
+# declarations with defaults for keywords
+# pylint: disable=bad-whitespace
 class Widget:
 
     """Base class for widgets."""
@@ -399,6 +402,7 @@ class Label(Widget, TextMixin, TtkMixin):
         self.set_text(text)
 
     def set(self, value: str):
+        """Set label text."""
         self.set_text(value)
 
 class Frame(Widget, TtkMixin):
