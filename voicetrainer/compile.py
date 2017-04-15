@@ -84,7 +84,7 @@ async def compile_(interface: Interface, file_type: FileType) -> None:
     if file_type is FileType.midi and \
             (interface.start_measure > 1 or interface.velocity != 0):
         await create_clipped_midi(interface)
-    _COMPILER_CB(1)
+    _COMPILER_CB(-1)
     if len(outs) > 0:
         _ERR_CB(bytes.decode(outs))
     if len(errs) > 0:
