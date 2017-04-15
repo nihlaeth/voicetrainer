@@ -398,6 +398,9 @@ class Label(Widget, TextMixin, TtkMixin):
             textvariable=self._text)
         self.set_text(text)
 
+    def set(self, value: str):
+        self.set_text(value)
+
 class Frame(Widget, TtkMixin):
 
     """Frame widget."""

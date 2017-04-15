@@ -174,7 +174,7 @@ class ExerciseTab:
         return Exercise(
             self._data_path,
             self._include_path,
-            name=self.name.get(),
+            name=self.name,
             pitch=self.key.get(),
             bpm=self.bpm.get(),
             sound=self.sound.get(),

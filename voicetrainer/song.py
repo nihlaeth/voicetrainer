@@ -51,7 +51,7 @@ class SongTab:
 
         # sheet display
         self._image_cache = {}
-        self.sheet = tk.Canvas(self.tab, bd=0, highlightthickness=0)
+        self.sheet = tk.Canvas(self.tab.raw, bd=0, highlightthickness=0)
         self.sheet.bind(
             "<Configure>",
             lambda e: asyncio.ensure_future(self._resize_sheet(e)))
