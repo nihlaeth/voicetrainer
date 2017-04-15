@@ -39,7 +39,7 @@ class ExerciseTab:
         self.repeat_once = False
 
         self.name = exercise.name
-        config = exercise.config
+        self.config = config = exercise.config
         self._data_path = exercise.data_path
         self._include_path = exercise.include_path
         self.tab = Frame(notebook)
@@ -235,8 +235,21 @@ class ExerciseTab:
         """Repeat this midi once, then continue."""
         self.repeat_once = True
 
+    async def _next_sound(self):
+        if 'sound' in self.config:
+            current_sound = self.sound.get()
+            sound_position = SOUND_LIST.index(current_sound)
+            if sound_position < len(SOUND_LIST) - 1:
+                self.sound.set(SOUND_LIST[sound_position + 1])
+            else:
+                self.sound.set(SOUND_LIST[0])
+            asyncio.ensure_future(self._update_sheet())
+
     async def _next(self):
         """Pick next exercise configuration."""
+        if 'key' not in self.config:
+            await self._next_sound()
+            return
         current_pitch = new_pitch = self.key.get()
         pitch_position = PITCH_LIST.index(current_pitch)
         pitch_range = self.pitch_range.get()
@@ -252,13 +265,7 @@ class ExerciseTab:
                 pitch_position += 1
                 if pitch_position >= len(PITCH_LIST):
                     pitch_position = 0
-                    current_sound = self.sound.get()
-                    sound_position = SOUND_LIST.index(current_sound)
-                    if sound_position < len(SOUND_LIST) - 1:
-                        self.sound.set(SOUND_LIST[sound_position + 1])
-                    else:
-                        self.sound.set(SOUND_LIST[0])
-                    asyncio.ensure_future(self._update_sheet())
+                    await self._next_sound()
                 if PITCH_LIST[pitch_position] in pitch_selection:
                     new_pitch = PITCH_LIST[pitch_position]
                     break
