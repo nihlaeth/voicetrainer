@@ -263,25 +263,26 @@ class Spinbox(Widget, ControlVarMixin, TkMixin):
             command: Optional[Callable[[tk.Event], None]]=None):
         if isinstance(parent, Widget):
             parent = parent.raw
-        self._variable = tk.StringVar()
         if values is None:
             self.data_type = int
+            self._variable = tk.IntVar()
             self._widget = tk.Spinbox(
                 parent,
                 width=width,
                 from_=from_,
                 to=to,
                 increment=increment,
-                textvariable=self.data_type,
+                textvariable=self._variable,
                 wrap=wrap,
                 command=command)
         else:
             self.data_type = str
+            self._variable = tk.StringVar()
             self._widget = tk.Spinbox(
                 parent,
                 width=width,
                 values=values,
-                textvariable=self.data_type,
+                textvariable=self._variable,
                 wrap=wrap,
                 command=command)
         self.set(default)

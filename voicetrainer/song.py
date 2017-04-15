@@ -240,6 +240,7 @@ class SongTab:
         data = {}
         data['key'] = self.key.get()
         data['bpm'] = self.bpm.get()
+        data['velocity'] = self.velocity.get()
         data['instruments'] = {}
         for instrument in self.instruments:
             data['instruments'][instrument] = \
@@ -252,6 +253,8 @@ class SongTab:
             self.key.set(data['key'])
         if 'bpm' in data:
             self.bpm.set(data['bpm'])
+        if 'velocity' in data:
+            self.velocity.set(data['velocity'])
         if 'instruments' not in data:
             return
         for instrument in data['instruments']:

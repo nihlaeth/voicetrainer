@@ -151,6 +151,7 @@ class ExerciseTab:
         data = {}
         data['pitch_range'] = self.pitch_range.get()
         data['bpm'] = self.bpm.get()
+        data['velocity'] = self.velocity.get()
         data['sound'] = self.sound.get()
         data['autonext'] = self.autonext.get()
         data['random'] = self.random.get()
@@ -162,6 +163,8 @@ class ExerciseTab:
             self.pitch_range.set(data['pitch_range'])
         if 'bpm' in data:
             self.bpm.set(data['bpm'])
+        if 'velocity' in data:
+            self.velocity.set(data['velocity'])
         if 'sound' in data:
             self.sound.set(data['sound'])
         if 'autonext' in data:
