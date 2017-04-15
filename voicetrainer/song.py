@@ -96,7 +96,7 @@ class SongTab:
             length=300,
             resolution=1,
             orient=tk.VERTICAL,
-            label='measure',
+            label=None,
             default=1)
         self.measure.grid(column=0, row=row_count, sticky=tk.W+tk.N+tk.E)
         if no_measures:
@@ -110,7 +110,7 @@ class SongTab:
             length=300,
             resolution=1,
             orient=tk.VERTICAL,
-            label='bpm',
+            label=None,
             default=140)
         self.bpm.grid(column=1, row=row_count, sticky=tk.W+tk.N+tk.E)
         if 'tempo' in config:
@@ -127,7 +127,7 @@ class SongTab:
             default='c',
             command=lambda _: asyncio.ensure_future(
                 self._on_pitch_change()))
-        self.key.grid(column=1, row=1, sticky=tk.W+tk.N)
+        self.key.grid(column=1, row=row_count, sticky=tk.W+tk.N)
         if 'key' in config:
             self.key.set(config['key'])
         else:
