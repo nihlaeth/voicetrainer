@@ -175,7 +175,7 @@ async def create_clipped_midi(interface: Interface):
             new_velocity = event.velocity + interface.velocity
             if str(track_num) in instruments and interface.has_instruments:
                 track_name = re.match(
-                    "([a-zA-Z_-0-9]+):([0-9]+:)?",
+                    "([a-zA-Z_\\-0-9]+):([0-9]+:)?",
                     instruments[str(track_num)])
                 if track_name:
                     new_velocity += interface.instrument_velocities[
