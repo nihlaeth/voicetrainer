@@ -256,11 +256,20 @@ class SongTab:
             midi = Checkbutton(
                 parent, text="", default=True)
             midi.grid(column=2, row=row_count, sticky=tk.N+tk.W+tk.E)
+            velocity = Spinbox(
+                parent,
+                width=3,
+                from_=-50,
+                to=50,
+                increment=1,
+                default=0)
+            velocity.grid(column=3, row=row_count, sticky=tk.W+tk.N)
             row_count += 1
             self.instruments[instrument] = {
                 'name': name,
                 'sheet': sheet,
-                'midi': midi}
+                'midi': midi,
+                'velocity': velocity}
 
     def _reset_song(self):
         """Set song pitch and bpm to song default."""
@@ -281,7 +290,8 @@ class SongTab:
         for instrument in self.instruments:
             data['instruments'][instrument] = {
                 'sheet': self.instruments[instrument]['sheet'].get(),
-                'midi': self.instruments[instrument]['midi'].get()}
+                'midi': self.instruments[instrument]['midi'].get(),
+                'velocity': self.instruments[instrument]['velocity'].get()}
         return data
 
     def restore_state(self, data):
@@ -305,6 +315,9 @@ class SongTab:
             if 'midi' in data['instruments'][instrument]:
                 self.instruments[instrument]['midi'].set(
                     data['instruments'][instrument]['midi'])
+            if 'velocity' in data['instruments'][instrument]:
+                self.instruments[instrument]['velocity'].set(
+                    data['instruments'][instrument]['velocity'])
 
     def _get_interface(self):
         """Return song interface."""
@@ -313,6 +326,9 @@ class SongTab:
             for instrument in self.instruments}
         sheet_instruments = {
             instrument: self.instruments[instrument]['sheet'].get() \
+            for instrument in self.instruments}
+        instrument_velocities = {
+            instrument: self.instruments[instrument]['velocity'].get() \
             for instrument in self.instruments}
         return Song(
             self._data_path,
@@ -323,6 +339,7 @@ class SongTab:
             start_measure=self.measure.get(),
             velocity=self.velocity.get(),
             sheet_instruments=sheet_instruments,
+            instrument_velocities=instrument_velocities,
             midi_instruments=midi_instruments)
 
     async def clear_cache(self):
