@@ -276,7 +276,7 @@ class SongTab:
             bpm=self.bpm.get(),
             start_measure=self.measure.get(),
             velocity=self.velocity.get(),
-            instruments=instruments)
+            midi_instruments=instruments)
 
     async def clear_cache(self):
         """Remove all compiled files."""
