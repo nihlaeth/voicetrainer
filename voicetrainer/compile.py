@@ -159,6 +159,9 @@ async def create_clipped_midi(interface: Interface):
     time_changes = await _collect_time_changes(midi)
     total_ticks = [0] * len(midi.tracks)
     instruments = {}
+    matched_tracks = {
+        instrument: 0 for instrument in interface.midi_instruments \
+        if interface.midi_instruments[instrument]}
     async for track_num, delta_time, event in MidiIterator(midi):
         total_ticks[track_num] += delta_time.time
         measure = get_measure_num(
@@ -178,8 +181,12 @@ async def create_clipped_midi(interface: Interface):
                     b"([a-zA-Z_\\-0-9]+):([0-9]+:)?",
                     instruments[str(track_num)])
                 if track_name:
-                    new_velocity += interface.instrument_velocities[
-                        track_name.group(1).decode('utf-8')]
+                    track_name = track_name.group(1).decode('utf-8')
+                    if track_name in interface.instrument_velocities:
+                        new_velocity += interface.instrument_velocities[
+                            track_name]
+                        matched_tracks[track_name] += 1
+
             if new_velocity < 0:
                 new_velocity = 0
             elif new_velocity > 127:
@@ -212,6 +219,13 @@ async def create_clipped_midi(interface: Interface):
     new_midi.open(str(interface.get_filename(FileType.midi)), 'wb')
     new_midi.write()
     new_midi.close()
+    if any([matched_tracks[instrument] == 0 for instrument in matched_tracks]):
+        _ERR_CB((
+            "no named tracks were found for {}, could not "
+            "apply instrument specific relative velocity").format(
+                ", ".join([
+                    instrument for instrument in matched_tracks \
+                    if matched_tracks[instrument] == 0])))
 
 async def get_single_sheet(
         image_cache: Dict,
