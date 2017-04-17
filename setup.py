@@ -13,4 +13,6 @@ setup(
     package_data={'voicetrainer': ['reset.midi']},
     entry_points={
         'gui_scripts': [
-            'voicetrainer = voicetrainer.gui:start']})
+            'voicetrainer = voicetrainer.gui:start'],
+        'console_scripts': [
+            'midi_introspection = voicetrainer.compile:midi_introspection']})

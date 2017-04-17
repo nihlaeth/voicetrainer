@@ -1,4 +1,5 @@
 """Compile lily code into png and midi."""
+import sys
 from typing import Dict, Tuple, Callable
 from pathlib import Path
 from asyncio import create_subprocess_exec
@@ -235,3 +236,18 @@ async def get_file(
     if not file_name.is_file():
         _ERR_CB("could not compile {}".format(file_name))
     return file_name
+
+def midi_introspection():
+    """Show contents of midi file in a readable format."""
+    if len(sys.argv) != 2:
+        print("usage: midi_introspection file")
+        return
+    midi = MidiFile()
+    midi.open(sys.argv[1])
+    midi.read()
+    midi.close()
+
+    for track in midi.tracks:
+        print("\n\ntrack number {}".format(track.index))
+        for event in track.events:
+            print(repr(event))
