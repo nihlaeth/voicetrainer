@@ -34,7 +34,9 @@ class Interface:
             page: int=1,
             start_measure: int=1,
             velocity: int=0,
-            instruments=None) -> None:
+            midi_instruments=None,
+            instrument_velocities=None,
+            sheet_instruments=None) -> None:
         self.data_path = data_path
         self.include_path = include_path
         self.name = name
@@ -44,7 +46,11 @@ class Interface:
         self.page = page
         self.start_measure = start_measure
         self.velocity = velocity
-        self.instruments = {} if instruments is None else instruments
+        self.midi_instruments = {} if midi_instruments is None else midi_instruments
+        self.instrument_velocities = {instrument: 0 for instrument in self.midi_instruments}
+        if instrument_velocities is not None:
+            self.instrument_velocities.update(instrument_velocities)
+        self.sheet_instruments = {} if sheet_instruments is None else midi_instruments
         self.config = self.get_config()
 
     def get_filename(self, file_type: FileType, compiling: bool=False):
@@ -58,15 +64,23 @@ class Interface:
             naming_elements.append("velocity{}".format(
                 self.velocity if not compiling else 0))
             if self.has_instruments:
-                naming_elements.append('-'.join(
-                    [instrument for instrument in self.instruments if \
-                    self.instruments[instrument]]))
+                instruments = []
+                for instrument in self.midi_instruments:
+                    if self.midi_instruments[instrument]:
+                        instruments.append("{}-{}".format(
+                            instrument,
+                            self.instrument_velocities[instrument]))
+                naming_elements.append('-'.join(instruments))
             if self.has_start_measure:
                 naming_elements.append("from-measure-{}".format(
                     self.start_measure if not compiling else 1))
         if file_type == FileType.png:
             extension = "png"
             naming_elements.append("{}".format(self.pitch))
+            if self.has_instruments:
+                naming_elements.append('-'.join(
+                    [instrument for instrument in self.sheet_instruments if \
+                    self.sheet_instruments[instrument]]))
             if 'sound' in self.config:
                 naming_elements.append("{}".format(self.sound))
             if 'pages' in self.config and not compiling:
@@ -76,6 +90,10 @@ class Interface:
         if file_type == FileType.pdf:
             extension = "pdf"
             naming_elements.append("{}".format(self.pitch))
+            if self.has_instruments:
+                naming_elements.append('-'.join(
+                    [instrument for instrument in self.sheet_instruments if \
+                    self.sheet_instruments[instrument]]))
             if 'sound' in self.config:
                 naming_elements.append("{}".format(self.sound))
         return self.data_path.joinpath("{}.{}".format(
@@ -131,6 +149,12 @@ class Interface:
                     tokens[0] == '%' and \
                     tokens[1] == 'midionly':
                 ignore_count += 1 if tokens[2] == 'start' else -1
+            if (file_type == FileType.png or file_type == FileType.pdf) and \
+                    self.has_instruments and len(tokens) > 3 and \
+                    tokens[0] == '%' and \
+                    tokens[1] == 'instrument':
+                if not self.sheet_instruments[tokens[3]]:
+                    ignore_count += 1 if tokens[2] == 'start' else -1
             if file_type == FileType.midi and \
                     len(tokens) > 2 and \
                     tokens[0] == '%' and \
@@ -140,12 +164,11 @@ class Interface:
                     self.has_instruments and len(tokens) > 3 and \
                     tokens[0] == '%' and \
                     tokens[1] == 'instrument':
-                if not self.instruments[tokens[3]]:
+                if not self.midi_instruments[tokens[3]]:
                     ignore_count += 1 if tokens[2] == 'start' else -1
             if ignore_count < 1:
                 keep_data.append(line)
         return '\n'.join(keep_data)
-
 
     def get_config(self):
         """Extract config from lily code."""
