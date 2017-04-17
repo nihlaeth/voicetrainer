@@ -1,5 +1,6 @@
 """Compile lily code into png and midi."""
 import sys
+import re
 from typing import Dict, Tuple, Callable
 from pathlib import Path
 from asyncio import create_subprocess_exec
@@ -155,6 +156,7 @@ async def create_clipped_midi(interface: Interface):
     ticks_per_quarter_note = midi.ticks_per_quarter_note
     time_changes = await _collect_time_changes(midi)
     total_ticks = [0] * len(midi.tracks)
+    instruments = {}
     async for track_num, delta_time, event in MidiIterator(midi):
         total_ticks[track_num] += delta_time.time
         measure = get_measure_num(
@@ -162,9 +164,20 @@ async def create_clipped_midi(interface: Interface):
             total_ticks[track_num],
             ticks_per_quarter_note)
 
+        # store instrument name
+        if event.type_ == "SEQUENCE_TRACK_NAME":
+            instruments[str(track_num)] = event.data
+
         # adjust velocity
         if event.type_ in ['NOTE_ON', 'NOTE_OFF']:
             new_velocity = event.velocity + interface.velocity
+            if str(track_num) in instruments and interface.has_instruments:
+                track_name = re.match(
+                    "([a-zA-Z_-0-9]+):([0-9]+:)?",
+                    instruments[str(track_num)])
+                if track_name:
+                    new_velocity += interface.instrument_velocities[
+                        track_name.group(0)]
             if new_velocity < 0:
                 new_velocity = 0
             elif new_velocity > 127:
