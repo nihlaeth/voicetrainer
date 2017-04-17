@@ -223,11 +223,43 @@ class SongTab:
 
     def _create_instruments_frame(self, parent, config):
         self.instruments = {}
-        for i, instrument in enumerate(config['instruments']):
+        self.instrument_labels = {}
+        row_count = 0
+
+        instrument_title = Label(parent=parent, text="Instrument")
+        instrument_title.grid(column=0, row=row_count, sticky=tk.W)
+        self.instrument_labels['instrument'] = instrument_title
+
+        sheet_title = Label(parent=parent, text="Sheet")
+        sheet_title.grid(column=1, row=row_count, sticky=tk.W)
+        self.instrument_labels['sheet'] = sheet_title
+
+        midi_title = Label(parent=parent, text="Midi")
+        midi_title.grid(column=2, row=row_count, sticky=tk.W)
+        self.instrument_labels['midi'] = midi_title
+
+        velocity_title = Label(parent=parent, text="Velocity")
+        velocity_title.grid(column=3, row=row_count, sticky=tk.W)
+        self.instrument_labels['velocity'] = velocity_title
+
+        row_count += 1
+
+        for instrument in config['instruments']:
+            name = Label(parent=parent, text=instrument)
+            name.grid(column=0, row=row_count, sticky=tk.W)
+            sheet = Checkbutton(
+                parent,
+                text="",
+                default=True,
+                command=lambda: asyncio.ensure_future(self._update_sheet()))
+            sheet.grid(column=1, row=row_count, sticky=tk.N+tk.W+tk.E)
             midi = Checkbutton(
-                parent, text=instrument, default=True)
-            midi.grid(column=0, row=i, sticky=tk.N+tk.W)
+                parent, text="", default=True)
+            midi.grid(column=2, row=row_count, sticky=tk.N+tk.W+tk.E)
+            row_count += 1
             self.instruments[instrument] = {
+                'name': name,
+                'sheet': sheet,
                 'midi': midi}
 
     def _reset_song(self):
@@ -248,6 +280,7 @@ class SongTab:
         data['instruments'] = {}
         for instrument in self.instruments:
             data['instruments'][instrument] = {
+                'sheet': self.instruments[instrument]['sheet'].get(),
                 'midi': self.instruments[instrument]['midi'].get()}
         return data
 
@@ -266,6 +299,9 @@ class SongTab:
                 continue
             if not isinstance(data['instruments'][instrument], dict):
                 continue
+            if 'sheet' in data['instruments'][instrument]:
+                self.instruments[instrument]['sheet'].set(
+                    data['instruments'][instrument]['sheet'])
             if 'midi' in data['instruments'][instrument]:
                 self.instruments[instrument]['midi'].set(
                     data['instruments'][instrument]['midi'])
@@ -275,6 +311,9 @@ class SongTab:
         midi_instruments = {
             instrument: self.instruments[instrument]['midi'].get() \
             for instrument in self.instruments}
+        sheet_instruments = {
+            instrument: self.instruments[instrument]['sheet'].get() \
+            for instrument in self.instruments}
         return Song(
             self._data_path,
             self._include_path,
@@ -283,6 +322,7 @@ class SongTab:
             bpm=self.bpm.get(),
             start_measure=self.measure.get(),
             velocity=self.velocity.get(),
+            sheet_instruments=sheet_instruments,
             midi_instruments=midi_instruments)
 
     async def clear_cache(self):
