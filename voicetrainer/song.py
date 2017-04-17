@@ -146,15 +146,10 @@ class SongTab:
         self.velocity.grid(column=1, row=row_count, sticky=tk.W+tk.N)
         row_count += 1
 
-        self.iframe = LabelFrame(parent, text="Instruments")
-        self.iframe.grid(
+        self.instruments_frame = LabelFrame(parent, text="Instruments")
+        self.instruments_frame.grid(
             column=0, row=row_count, columnspan=2, sticky=tk.NSEW)
-        self.instruments = {}
-        for i, instrument in enumerate(config['instruments']):
-            checkbox = Checkbutton(
-                self.iframe, text=instrument, default=True)
-            checkbox.grid(column=0, row=i, sticky=tk.N+tk.W)
-            self.instruments[instrument] = checkbox
+        self._create_instruments_frame(self.instruments_frame, config)
         row_count += 1
 
         self.b_recompile = Button(
@@ -225,6 +220,14 @@ class SongTab:
         self.b_play.grid(
             column=0, row=row_count, columnspan=2, sticky=tk.NSEW)
         row_count += 1
+
+    def _create_instruments_frame(self, parent, config):
+        self.instruments = {}
+        for i, instrument in enumerate(config['instruments']):
+            checkbox = Checkbutton(
+                parent, text=instrument, default=True)
+            checkbox.grid(column=0, row=i, sticky=tk.N+tk.W)
+            self.instruments[instrument] = checkbox
 
     def _reset_song(self):
         """Set song pitch and bpm to song default."""
