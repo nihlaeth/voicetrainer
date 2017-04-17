@@ -224,10 +224,11 @@ class SongTab:
     def _create_instruments_frame(self, parent, config):
         self.instruments = {}
         for i, instrument in enumerate(config['instruments']):
-            checkbox = Checkbutton(
+            midi = Checkbutton(
                 parent, text=instrument, default=True)
-            checkbox.grid(column=0, row=i, sticky=tk.N+tk.W)
-            self.instruments[instrument] = checkbox
+            midi.grid(column=0, row=i, sticky=tk.N+tk.W)
+            self.instruments[instrument] = {
+                'midi': midi}
 
     def _reset_song(self):
         """Set song pitch and bpm to song default."""
@@ -246,8 +247,8 @@ class SongTab:
         data['velocity'] = self.velocity.get()
         data['instruments'] = {}
         for instrument in self.instruments:
-            data['instruments'][instrument] = \
-                self.instruments[instrument].get()
+            data['instruments'][instrument] = {
+                'midi': self.instruments[instrument]['midi'].get()}
         return data
 
     def restore_state(self, data):
@@ -263,13 +264,16 @@ class SongTab:
         for instrument in data['instruments']:
             if instrument not in self.instruments:
                 continue
-            self.instruments[instrument].set(
-                data['instruments'][instrument])
+            if not isinstance(data['instruments'][instrument], dict):
+                continue
+            if 'midi' in data['instruments'][instrument]:
+                self.instruments[instrument]['midi'].set(
+                    data['instruments'][instrument]['midi'])
 
     def _get_interface(self):
         """Return song interface."""
-        instruments = {
-            instrument: self.instruments[instrument].get() \
+        midi_instruments = {
+            instrument: self.instruments[instrument]['midi'].get() \
             for instrument in self.instruments}
         return Song(
             self._data_path,
@@ -279,7 +283,7 @@ class SongTab:
             bpm=self.bpm.get(),
             start_measure=self.measure.get(),
             velocity=self.velocity.get(),
-            midi_instruments=instruments)
+            midi_instruments=midi_instruments)
 
     async def clear_cache(self):
         """Remove all compiled files."""
