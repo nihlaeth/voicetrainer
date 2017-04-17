@@ -46,12 +46,16 @@ class Interface:
         self.page = page
         self.start_measure = start_measure
         self.velocity = velocity
-        self.midi_instruments = {} if midi_instruments is None else midi_instruments
-        self.instrument_velocities = {instrument: 0 for instrument in self.midi_instruments}
+        self.config = self.get_config()
+        self.midi_instruments = {instrument: True for instrument in self.config['instruments']}
+        if midi_instruments is not None:
+            self.midi_instruments.update(midi_instruments)
+        self.instrument_velocities = {instrument: 0 for instrument in self.config['instruments']}
         if instrument_velocities is not None:
             self.instrument_velocities.update(instrument_velocities)
-        self.sheet_instruments = {} if sheet_instruments is None else midi_instruments
-        self.config = self.get_config()
+        self.sheet_instruments = {instrument: True for instrument in self.config['instruments']}
+        if sheet_instruments is not None:
+            self.sheet_instruments.update(sheet_instruments)
 
     def get_filename(self, file_type: FileType, compiling: bool=False):
         """Return full path."""
