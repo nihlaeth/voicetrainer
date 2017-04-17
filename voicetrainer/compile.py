@@ -84,7 +84,9 @@ async def compile_(interface: Interface, file_type: FileType) -> None:
     outs, errs = await proc.communicate(str.encode(
         interface.get_final_lily_code(file_type)))
     if file_type is FileType.midi and \
-            (interface.start_measure > 1 or interface.velocity != 0):
+            (interface.start_measure > 1 or \
+             interface.velocity != 0 or \
+             any([velocity != 0 for velocity in interface.instrument_velocities])):
         await create_clipped_midi(interface)
     _COMPILER_CB(-1)
     if len(outs) > 0:
