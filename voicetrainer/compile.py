@@ -179,7 +179,7 @@ async def create_clipped_midi(interface: Interface):
                     instruments[str(track_num)])
                 if track_name:
                     new_velocity += interface.instrument_velocities[
-                        track_name.group(0).decode('utf-8')]
+                        track_name.group(1).decode('utf-8')]
             if new_velocity < 0:
                 new_velocity = 0
             elif new_velocity > 127:
