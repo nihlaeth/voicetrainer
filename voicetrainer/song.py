@@ -602,4 +602,4 @@ class SongMixin:
     async def clear_cache(self):
         """Remove all compiled files."""
         for key in self.__tabs:
-            self.__tabs[key].clear_cache()
+            await self.__tabs[key].clear_cache()
