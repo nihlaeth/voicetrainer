@@ -516,7 +516,7 @@ class SongMixin:
         self.__notebook.rowconfigure(0, weight=1)
         self.__notebook.columnconfigure(0, weight=1)
         for song in self.__data_path.glob('*.ly'):
-            self.__tabs[str(song)] = SongTab(
+            self.__tabs[song.stem] = SongTab(
                 self.__notebook,
                 Song(
                     data_path=self.__data_path,
