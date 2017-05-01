@@ -138,7 +138,7 @@ async def _collect_time_changes(midi: MidiFile):
             time_changes.append(
                 (
                     total_ticks[track_num],
-                    (t_signature[0] / pow(2, t_signature[1])) * 4))
+                    (t_signature[0] * pow(2, t_signature[1])) / (pow(2, t_signature[1])) / 4 ))
     return time_changes
 
 async def create_clipped_midi(interface: Interface):
